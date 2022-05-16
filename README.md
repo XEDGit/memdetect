@@ -27,7 +27,9 @@ You can use this executable for compiling single files, multiple files or entire
   #### Optional
   
     --e folder_to_exclude_name: Specify a folder which is inside the directory_path but you want to exclude from compiling (useful only with --d option)
+    
     --flags flag0 flag...: Specify flags to use when compiling with gcc
+    
     --a arg0 arg...: Specify arguments to run with executable
 
     
