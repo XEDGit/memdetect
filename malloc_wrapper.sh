@@ -12,11 +12,11 @@ RED="\e[31m"
 
 DEF="\e[39m"
 
-HELP_MSG="Usage: ./malloc_wrapper project_path [-h] [-e folder_to_exclude_name] [-I include_path] [-l library] [-L library_path]\nInfo: -L, -l, -I flags will be added to the gcc command"
+HELP_MSG="Usage: ./malloc_wrapper project_path -f filename || -d directory_path [[-h] [-e folder_to_exclude_name] [-I include_path] [-l library] [-L library_path]]\nInfo: -L, -l, -I flags will be added to the gcc command"
 
 I=1
 
-if [ ARGS_LEN -lt 2 ]
+if [ $ARGS_LEN -lt 2 ]
 then
 	printf "$HELP_MSG\n"
     exit
@@ -41,10 +41,6 @@ do
 
         "-I")
 			INCLUDES+="-I${ARGS[$I + 1]} "
-        ;;
-
-        "-readline")
-			READLINE_INCLUDES+=" -lreadline -L${ARGS[I + 1]}/lib -I${ARGS[I + 1]}/include"
         ;;
 
 		"-l")
