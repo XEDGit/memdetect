@@ -151,6 +151,7 @@ void	*malloc(size_t size)
 	{
 		printf(RED \"(MALLOC_FAIL) %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
 		malloc_fail = 0;
+		og_free(stack);
 		return (0);
 	}
 	ret = og_malloc(size);
