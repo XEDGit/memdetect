@@ -8,11 +8,15 @@ RED="\e[31m"
 
 DEF="\e[39m"
 
+RE='^[0-9]+$'
+
 GCC_FLAGS=""
 
 OUT_ARGS=""
 
-HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
+MALLOC_FAIL_INDEX=0
+
+HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--fail malloc_to_fail_index] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
 
 I=1
 
@@ -48,6 +52,16 @@ do
         "--e")
 			EXCLUDE+="! -path '*${ARGS[$I + 1]}*' "
         ;;
+
+		"--fail")
+			NEW_VAL=${ARGS[$I + 1]}
+			if ! [[ $NEW_VAL =~ $RE ]]
+			then
+				printf "Error: $arg argument is not a number"
+				exit 1
+			fi
+			MALLOC_FAIL_INDEX=$NEW_VAL
+		;;
 
         "--flags")
 			(( I = I + 1 ))
@@ -121,20 +135,26 @@ void	malloc_hook_string_edit(char *str)
 
 void	*malloc(size_t size)
 {
-	void	*ret;
-	char	**stack;
-	int		stack_size;
-	void	(*og_free)(void *);
-	void	*(*og_malloc)(size_t);
+	void		*ret;
+	char		**stack;
+	int			stack_size;
+	static int	malloc_fail = 0;
+	void		(*og_free)(void *);
+	void		*(*og_malloc)(size_t);
 
 	og_malloc = dlsym(RTLD_NEXT, \"malloc\");
 	og_free = dlsym(RTLD_NEXT, \"free\");
-	ret = og_malloc(size);
 	stack_size = malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	printf(RED \"(MALLOC_WRAPPER) %s - %s allocated %zu bytes at %p\n\" DEF, \
-	&stack[3][59], &stack[2][59], size, ret);
+	if (++malloc_fail == MALLOC_FAIL_INDEX)
+	{
+		printf(RED \"(MALLOC_FAIL) %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
+		malloc_fail = 0;
+		return (0);
+	}
+	ret = og_malloc(size);
+	printf(RED \"(MALLOC_WRAPPER) %s - %s allocated %zu bytes at %p\n\" DEF, &stack[3][59], &stack[2][59], size, ret);
 	og_free(stack);
 	return (ret);
 }
@@ -163,7 +183,7 @@ else
 	SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
 fi
 
-GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
+GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
 echo $RED$GCC_CMD$DEF
 eval $GCC_CMD
 
@@ -177,4 +197,3 @@ else
 fi
 printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
 ./malloc_debug $OUT_ARGS
-rm ./malloc_debug
