@@ -32,7 +32,7 @@ do
 		;;
 		
 		"-f")
-			FILE_PATH+=${ARGS[I + 1]}
+			FILE_PATH+=" ${ARGS[I + 1]}"
 			PROJECT_PATH='.'
 		;;
         "-e")
