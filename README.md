@@ -3,6 +3,13 @@
 This is a shell script to compile your file or project with a wrapper of malloc() and free() which is gonna tell you at any point of your program
 which function in calling malloc or free and which address is getting allocated or freed.
 
+## Info:
+
+### Platform(s):
+
+  - MacOS 🍏
+
+
 ## Usage
 
 You can use this executable for compiling single files, multiple files or entire projects.
