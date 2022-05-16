@@ -78,4 +78,13 @@ everytime a free happens this will be printed on the stdout, with the last two f
   - (MALLOC_FAIL):
 everytime your program will execute the value of --fail times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
 
+## Makefile integration:
+You can integrate this program with Makefile by filling this template and executing this command in your Makefile path
+
+    cat << EOF >> Makefile
+    malloc_wrapper:
+        /path/to/malloc_wrapper.sh --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)
+    EOF
+
+
 ## Consider adding it to your $PATH so you can run it whitout having to move the scipt everytime!
