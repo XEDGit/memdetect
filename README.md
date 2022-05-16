@@ -1,7 +1,7 @@
 # malloc_wrapper
 
 This is a shell script to compile your file or project with a wrapper of malloc() and free() which is gonna tell you at any point of your program
-which function in calling malloc or free and which address is getting allocated or freed.
+which function in calling malloc or free and which address is getting allocated or freed, you can use it in combination with 'leaks' to figure out which variable is leaking.
 
 ## Info:
 
@@ -35,20 +35,23 @@ You can use this executable for compiling single files, multiple files or entire
     
   All the optional flags will be added to the gcc command in writing order
   
-### Run with single file
+### Examples:
+
+#### Run with single file
 
     ./malloc_wrapper.sh --f ft_split.c
     
-### Run with multiple file
+#### Run with multiple file
 
     ./malloc_wrapper.sh --f ft_split.c ft_strlen.c
 
-### Run with project folder
+#### Run with project folder
 
     ./malloc_wrapper.sh --d minitalk
 
-### Run with options
+#### Run with options
 
     ./malloc_wrapper.sh --d . --flags -I src/ft_printf -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples
+
     
 ### Consider adding it to your $PATH so you can run it whitout having to move the scipt everytime!
