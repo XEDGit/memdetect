@@ -28,26 +28,25 @@ You can use this executable for compiling single files, multiple files or entire
   
     --e folder_to_exclude_name: Specify a folder which is inside the directory_path but you want to exclude from compiling (useful only with --d option)
     --flags flag0 flag...: Specify flags to use when compiling with gcc
-	--a arg0 arg...: Specify arguments to run with executable
+    --a arg0 arg...: Specify arguments to run with executable
 
     
   All the optional flags will be added to the gcc command in writing order
   
 ### Run with single file
 
-    ./malloc_wrapper.sh -f ft_split.c
+    ./malloc_wrapper.sh --f ft_split.c
     
 ### Run with multiple file
 
-    ./malloc_wrapper.sh -f ft_split.c -f ft_strlen.c
+    ./malloc_wrapper.sh --f ft_split.c ft_strlen.c
 
 ### Run with project folder
 
-    ./malloc_wrapper.sh -d minitalk
-    
-    Output:
-    gcc $(find minitalk -name '*.c') -rdynamic
+    ./malloc_wrapper.sh --d minitalk
 
 ### Run with options
 
-    ./malloc_wrapper.sh -d . -I includes -e examples -I src/ft_printf -l readline -L ~/.brew/opt/readline/lib -I ~/.brew/opt/readline/include
+    ./malloc_wrapper.sh --d . --flags -I src/ft_printf -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples
+    
+### Consider adding it to your $PATH so you can run it whitout having to move the scipt everytime!
