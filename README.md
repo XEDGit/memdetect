@@ -81,10 +81,9 @@ everytime your program will execute the value of --fail times a malloc() this wi
 ## Makefile integration:
 You can integrate this program with Makefile by filling this template and executing this command in your Makefile path
 
-    cat << EOF >> Makefile
+    echo >> Makefile '
     malloc_wrapper:
-        /path/to/malloc_wrapper.sh --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)
-    EOF
+        /path/to/malloc_wrapper.sh --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
 
 
 ## Consider adding it to your $PATH so you can run it whitout having to move the scipt everytime!
