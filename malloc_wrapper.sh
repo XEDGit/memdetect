@@ -4,21 +4,21 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
-INCLUDES=""
-
-READLINE_INCLUDES=""
-
 RED="\e[31m"
 
 DEF="\e[39m"
 
-HELP_MSG="Usage: ./malloc_wrapper project_path -f filename || -d directory_path [[-h] [-e folder_to_exclude_name] [-I include_path] [-l library] [-L library_path]]\nInfo: -L, -l, -I flags will be added to the gcc command"
+GCC_FLAGS=""
+
+OUT_ARGS=""
+
+HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
 
 I=1
 
 if [ $ARGS_LEN -lt 2 ]
 then
-	printf "$HELP_MSG\n"
+	printf "$HELP_MSG"
     exit
 fi
 
@@ -27,32 +27,58 @@ do
     arg=${ARGS[$I]}
 	case $arg in
 
-		"-d")
+		"--d")
 			PROJECT_PATH=${ARGS[$I + 1]%/}
 		;;
 		
-		"-f")
-			FILE_PATH+=" ${ARGS[I + 1]}"
+		"--f")
+			(( I = I + 1 ))
+			while [[ $I -le $ARGS_LEN ]]
+			do
+				if [[ ${ARGS[$I]} = "--"* ]]
+				then
+					(( I = I - 1 ))
+					break
+				fi
+				FILE_PATH+=" ${ARGS[$I]}"
+				(( I = I + 1 ))
+			done
 			PROJECT_PATH='.'
 		;;
-        "-e")
+        "--e")
 			EXCLUDE+="! -path '*${ARGS[$I + 1]}*' "
         ;;
 
-        "-I")
-			INCLUDES+="-I${ARGS[$I + 1]} "
-        ;;
-
-		"-l")
-			READLINE_INCLUDES+=" -l${ARGS[I + 1]}"
+        "--flags")
+			(( I = I + 1 ))
+			while [[ $I -le $ARGS_LEN ]]
+			do
+				if [[ ${ARGS[$I]} = "--"* ]]
+				then
+					(( I = I - 1 ))
+					break
+				fi
+				GCC_FLAGS+=" ${ARGS[$I]}"
+				(( I = I + 1 ))
+			done
 		;;
 
-		"-L")
-			READLINE_INCLUDES+=" -L${ARGS[I + 1]}"
+		"--a")
+			(( I = I + 1 ))
+			while [[ $I -le $ARGS_LEN ]]
+			do
+				if [[ ${ARGS[$I]} = "--"* ]]
+				then
+					(( I = I - 1 ))
+					break
+				fi
+				OUT_ARGS+=("${ARGS[$I]}")
+				(( I = I + 1 ))
+			done
 		;;
 
-        "-h")
-			printf "$HELP_MSG\n"
+        "--h")
+			printf "$HELP_MSG"
             exit
         ;;
     esac
@@ -61,7 +87,7 @@ done
 
 if ! [ -d $PROJECT_PATH ] && [ -z $FILE_PATH]
 then
-	echo "Error: project_path is not a folder"
+	echo "Error: project_path is not a folder\n"
 	exit
 fi
 
@@ -134,10 +160,10 @@ if [ -z $FILE_PATH ]
 then
 	SRC=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ')
 else
-	SRC="$PROJECT_PATH/fake_malloc.c $FILE_PATH"
+	SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
 fi
 
-GCC_CMD="gcc $SRC -rdynamic -o malloc_debug $INCLUDES $READLINE_INCLUDES"
+GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
 echo $RED$GCC_CMD$DEF
 eval $GCC_CMD
 
@@ -149,6 +175,6 @@ else
 	rm "$PROJECT_PATH/fake_malloc.c"
     exit
 fi
-printf "$RED./malloc_debug:$DEF\n"
-./malloc_debug
+printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+./malloc_debug $OUT_ARGS
 rm ./malloc_debug

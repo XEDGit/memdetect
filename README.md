@@ -11,18 +11,18 @@ You can use this executable for compiling single files, multiple files or entire
 
   #### Mandatory
   
-    -d directory_path: Specify the path of your project directory
+    --d directory_path: Specify the path of your project directory
   
   or
   
-    -f file_path: Specify one or more (by typing multiple -f) files to compile with the wrapper
+    --f file_path0 file_path...: Specify one or more files to compile with the wrapper
     
   #### Optional
   
-    -e folder_to_exclude_name: Specify a folder which is inside the directory_path but you want to exclude from compiling (useful only with -d option)
-    -I include_path: Specify one or more (by typing multiple -I) paths to include in the gcc command
-    -l library: Specify one or more (by typing multiple -l) libraries to include in the gcc command
-    -L library_path: Specify one or more (by typing multiple -L) library paths to include in the gcc command
+    --e folder_to_exclude_name: Specify a folder which is inside the directory_path but you want to exclude from compiling (useful only with --d option)
+    --flags flag0 flag...: Specify flags to use when compiling with gcc
+	--a arg0 arg...: Specify arguments to run with executable
+
     
   All the optional flags will be added to the gcc command in writing order
   
