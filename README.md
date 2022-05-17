@@ -1,5 +1,5 @@
 # malloc_wrapper
-
+<img src="https://img.shields.io/badge/Tools-finished-brightgreen)" />
 This is a shell script to compile your file or project with a wrapper of malloc() and free() which is going to help you debugging, you can also use it in combination with ‘leaks malloc_debug’
 
 ## Info:
@@ -10,7 +10,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
 ### Output file:
 
-malloc_debug
+ - malloc_debug
 
 
 ## Usage
@@ -87,9 +87,9 @@ Every time your program executes the value of `--fail` times a malloc() this wil
 You can add this program to your $PATH by executing this command
 
 ```console
-    git clone https://github.com/XEDGit/malloc_wrapper.git
-    sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH##*:}/malloc_wrapper
-    rm -rf ./malloc_wrapper
+git clone https://github.com/XEDGit/malloc_wrapper.git
+sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH%%:*}/malloc_wrapper
+rm -rf ./malloc_wrapper
 ```
 from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
 
@@ -97,7 +97,7 @@ from now on you can just type `malloc_wrapper` in your terminal from any folder 
 You can integrate this program with Makefile by executing this command in your Makefile path
 
 ```shell
-    echo >> ./Makefile '
-    malloc_wrapper:
-       /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
+echo >> ./Makefile '
+malloc_wrapper:
+    /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
 ```
