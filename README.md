@@ -21,21 +21,21 @@ You can use this executable for compiling single files, multiple files or entire
 
  #### Mandatory
  
-    --d directory_path: Specify the path of your project directory
+ - `--d directory_path`: Specify the path of your project directory
  
  or
  
-    --f file_path0 file_path...: Specify one or more files to compile with the wrapper
+ - `--f file_path0 file_path...`: Specify one or more files to compile with the wrapper
    
  #### Optional
  
-    --e folder_to_exclude_name: Specify a folder which is inside the directory_path but you want to exclude from compiling (useful only with --d option)
-   
-    --flags flag0 flag...: Specify flags to use when compiling with gcc
+ - `--e folder_to_exclude_name`: Specify a folder which is inside the `--d directory_path` but you want to exclude from compiling
 
-    --fail malloc_to_fail_index: Specify which malloc should fail (return 0), 1 will fail first malloc and so on 
-   
-    --a arg0 arg...: Specify arguments to run with executable
+ - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
+
+ - `--fail malloc_to_fail_index`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on 
+
+ - `--a arg0 arg...`: Specify arguments to run with executable
 
    
  All the optional flags will be added to the gcc command in writing order
@@ -72,17 +72,28 @@ The output will be presented as
     (FREE_WRAPPER) semicolon_handle/free2d free 0x6000010b4050
     (FREE_WRAPPER) semicolon_handle/free2d free 0x6000010b4040
 
- - (MALLOC_WRAPPER):
+ - `(MALLOC_WRAPPER)`:
 everytime a malloc happens this will be printed on the stdout, with the last two functions in the stack at the happening of malloc(), the amount of bytes and the address allocated
    
- - (MALLOC_FREE):
+ - `(MALLOC_FREE)`:
 everytime a free happens this will be printed on the stdout, with the last two functions in the stack at the happening of malloc() and the address freed
 
- - (MALLOC_FAIL):
-Every time your program executes the value of --fail times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
+ - `(MALLOC_FAIL)`:
+Every time your program executes the value of `--fail` times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
 
+## Setup:
 
-## Makefile integration:
+### Adding malloc_wrapper to your $PATH:
+You can add this program to your $PATH by executing this command
+
+```console
+    git clone https://github.com/XEDGit/malloc_wrapper.git
+    sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH##*:}/malloc_wrapper
+    rm -rf ./malloc_wrapper
+```
+from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
+
+### Makefile integration:
 You can integrate this program with Makefile by executing this command in your Makefile path
 
 ```shell
@@ -90,5 +101,3 @@ You can integrate this program with Makefile by executing this command in your M
     malloc_wrapper:
        /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
 ```
-
-## Consider adding it to your $PATH so you can run it without having to move the script every time!
