@@ -12,6 +12,26 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
  - malloc_debug
 
+## Setup:
+
+### Adding malloc_wrapper to your $PATH:
+You can add this program to your $PATH by executing this command
+
+```console
+git clone https://github.com/XEDGit/malloc_wrapper.git
+sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH%%:*}/malloc_wrapper
+rm -rf ./malloc_wrapper
+```
+from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
+
+### Makefile integration:
+You can integrate this program with Makefile by executing this command in your Makefile path
+
+```shell
+echo >> ./Makefile '
+malloc_wrapper:
+    /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
+```
 
 ## Usage
 
@@ -80,24 +100,3 @@ everytime a free happens this will be printed on the stdout, with the last two f
 
  - `(MALLOC_FAIL)`:
 Every time your program executes the value of `--fail` times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
-
-## Setup:
-
-### Adding malloc_wrapper to your $PATH:
-You can add this program to your $PATH by executing this command
-
-```console
-git clone https://github.com/XEDGit/malloc_wrapper.git
-sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH%%:*}/malloc_wrapper
-rm -rf ./malloc_wrapper
-```
-from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
-
-### Makefile integration:
-You can integrate this program with Makefile by executing this command in your Makefile path
-
-```shell
-echo >> ./Makefile '
-malloc_wrapper:
-    /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
-```
