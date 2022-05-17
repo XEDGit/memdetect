@@ -20,11 +20,11 @@ HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_pat
 
 I=1
 
-if [ $ARGS_LEN -lt 2 ]
-then
-	printf "$HELP_MSG"
-    exit
-fi
+# if [ $ARGS_LEN -lt 2 ]
+# then
+# 	printf "$HELP_MSG"
+#     exit 1
+# fi
 
 while [[ $I -le $ARGS_LEN ]]
 do
@@ -57,10 +57,16 @@ do
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
-				printf "Error: $arg argument is not a number"
-				exit 1
+				if [ $NEW_VAL = "all" ]
+				then
+					MALLOC_FAIL_LOOP=1
+				else
+					printf "Error: $arg argument is not a number."
+					exit 1
+				fi
+			else
+				MALLOC_FAIL_INDEX=$NEW_VAL
 			fi
-			MALLOC_FAIL_INDEX=$NEW_VAL
 		;;
 
         "--flags")
@@ -99,7 +105,13 @@ do
     (( I = I + 1 ))
 done
 
-if ! [ -d $PROJECT_PATH ] && [ -z $FILE_PATH]
+if [ -z $FILE_PATH] && [ -z $PROJECT_PATH ]
+then
+	printf "Error: Missing --d or --f option.\n$HELP_MSG"
+	exit 1
+fi
+
+if  [ -z $FILE_PATH] && ! [ -d $PROJECT_PATH ]
 then
 	echo "Error: project_path is not a folder\n"
 	exit
@@ -184,17 +196,46 @@ else
 	SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
 fi
 
-GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
-echo $RED$GCC_CMD$DEF
-eval $GCC_CMD
-
-if [[ $? == 0 ]]
+if [ -z $MALLOC_FAIL_LOOP ]
 then
-	rm "$PROJECT_PATH/fake_malloc.c"
-    printf "$RED" "Success$DEF\n"
+	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	echo $RED$GCC_CMD$DEF
+	eval $GCC_CMD
+	if [[ $? == 0 ]]
+	then
+		rm "$PROJECT_PATH/fake_malloc.c"
+	    printf "$RED" "Success$DEF\n"
+	else
+		rm "$PROJECT_PATH/fake_malloc.c"
+	    exit
+	fi
+	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	./malloc_debug $OUT_ARGS
 else
-	rm "$PROJECT_PATH/fake_malloc.c"
-    exit
+	COUNTER=0
+	CONTINUE="\n"
+	while [[ $COUNTER -ge 0 ]]
+	do
+		(( COUNTER = COUNTER + 1 ))
+		printf "Press any key to run with --fail $COUNTER or 'q' to quit: "
+		read -k1 CONTINUE
+		if [ $CONTINUE = "q" ]
+		then
+			rm "$PROJECT_PATH/fake_malloc.c"
+			printf "\nExiting\n"
+			exit 0
+		fi
+		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		echo $RED$GCC_CMD$DEF
+		eval $GCC_CMD
+		if [[ $? == 0 ]]
+		then
+		    printf "$RED" "Success$DEF\n"
+		else
+			rm "$PROJECT_PATH/fake_malloc.c"
+		    exit
+		fi
+		printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+		./malloc_debug $OUT_ARGS
+	done
 fi
-printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
-./malloc_debug $OUT_ARGS
