@@ -53,9 +53,15 @@ You can use this executable for compiling single files, multiple files or entire
 
  - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
- - `--fail malloc_to_fail_index`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on 
-
  - `--a arg0 arg...`: Specify arguments to run with executable
+
+##### Fail
+
+ - `--fail malloc_to_fail_index`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on
+
+or
+
+ - `--fail all`: Start a loop to compile your code and run it failing 1st malloc on 1st execution, 2nd on 2nd execution and so on
 
    
  All the optional flags will be added to the gcc command in writing order
