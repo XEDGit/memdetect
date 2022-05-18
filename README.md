@@ -6,18 +6,19 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
 ### Platform:
 
- 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen" />
+  - 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen" />
 
 
- 🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
+  - 🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
 
 ### Enviroment:
 
- 🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet" />
+  - 🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet" />
 
 ### Output file:
 
- 📄 malloc_debug
+  - 📄 malloc_debug
+
 
 ## Setup:
 
@@ -28,7 +29,7 @@ You can add this program to your $PATH by adding this flag
 ./malloc_wrapper.sh --add-path
 ```
 from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
-
+ 
 ### Makefile integration:
 You can integrate this program with Makefile by executing this command in your Makefile path
 
