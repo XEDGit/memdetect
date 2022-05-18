@@ -8,6 +8,10 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
  - MacOS 🍏
 
+### Enviroment:
+
+ - gcc
+
 ### Output file:
 
  - malloc_debug
@@ -18,9 +22,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 You can add this program to your $PATH by executing this command
 
 ```console
-git clone https://github.com/XEDGit/malloc_wrapper.git
-sudo cp ./malloc_wrapper/malloc_wrapper.sh ${PATH%%:*}/malloc_wrapper
-rm -rf ./malloc_wrapper
+./malloc_wrapper --add-path
 ```
 from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
 
@@ -33,35 +35,31 @@ malloc_wrapper:
     /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
 ```
 
-## Usage
+## Usage:
 
 You can use this executable for compiling single files, multiple files or entire projects.
 
-### Flags
+### Flags:
 
- #### Mandatory
- 
- - `--d directory_path`: Specify the path of your project directory
- 
- or
- 
- - `--f file_path0 file_path...`: Specify one or more files to compile with the wrapper
+ - #### Mandatory (choose only one):
+
+   * `--d directory_path`: Specify the path of your project directory
+
+   * `--f file_path0 file_path...`: Specify one or more files to compile with the wrapper
    
- #### Optional
- 
- - `--e folder_to_exclude_name`: Specify a folder which is inside the `--d directory_path` but you want to exclude from compiling
+ - #### Optional:
 
- - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
+   - `--e folder_to_exclude_name`: Specify a folder which is inside the `--d directory_path` but you want to exclude from compiling
 
- - `--a arg0 arg...`: Specify arguments to run with executable
+   - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
-##### Fail
+   - `--a arg0 arg...`: Specify arguments to run with executable
 
- - `--fail malloc_to_fail_index`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on
+ - ##### --fail:
 
-or
+   - `--fail malloc_to_fail_number`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on
 
- - `--fail all`: Start a loop to compile your code and run it failing 1st malloc on 1st execution, 2nd on 2nd execution and so on
+   - `--fail all`: Start a loop to compile your code and run it failing 1st malloc on 1st execution, 2nd on 2nd execution and so on
 
    
  All the optional flags will be added to the gcc command in writing order
@@ -82,21 +80,60 @@ or
 
 #### Run with options
 
-    ./malloc_wrapper.sh --d . --flags -Isrc/ft_printf -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
+    ./malloc_wrapper.sh --d .. --flags -Isrc/ft_printf -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
 
 ## Understanding the output:
 
-The output will be presented as
+###Example:
 
-    (MALLOC_WRAPPER) semicolon_handle - ft_split allocated 16 bytes at 0x6000010b4040
-    (MALLOC_WRAPPER) ft_split - copy_word allocated 5 bytes at 0x6000010b4050
-    (MALLOC_WRAPPER) heredoc_check - heredoc_init allocated 8 bytes at 0x6000010b4060
-    (MALLOC_FAIL) lexer - ft_strdup malloc num 4 failed
-    (FREE_WRAPPER) error_free2dint/free2dint free 0x0
-    (FREE_WRAPPER) error_free2dint/free2dint free 0x6000010b4060
-    (FREE_WRAPPER) semicolon_handle/free2d free 0x0
-    (FREE_WRAPPER) semicolon_handle/free2d free 0x6000010b4050
-    (FREE_WRAPPER) semicolon_handle/free2d free 0x6000010b4040
+#### Input:
+
+```console
+# With malloc_wrapper in $PATH
+xedgit@pc:~ $ malloc_wrapper --f example.c --fail 3
+```
+
+```c
+// example.c:
+
+#include <stdlib.h>
+#include <string.h>
+
+char *my_strdup(char *str)
+{
+  char    *new;
+  int     c;
+  
+  new = malloc(strlen(str) + 1);
+  if (!new)
+    return (0);
+  c = 0;
+  while (*str)
+    new[c++] = *str++;
+  new[c] = 0;
+  return (new);
+}
+
+int main(void)
+{
+  char *str1, *str2, *str3;
+
+  str1 = malloc(3);
+  str1[0] = 'e';
+  str1[1] = 'x';
+  str1[2] = '\0';
+  str2 = my_strdup(str1);
+  str3 = my_strdup(str2);
+  free(str2);
+  return (0);
+}
+```
+
+    Output:
+    (MALLOC_WRAPPER) start - main allocated 3 bytes at 0x6000010b4040
+    (MALLOC_WRAPPER) main - strdup allocated 3 bytes at 0x6000010b4050
+    (MALLOC_FAIL) main - ft_strdup malloc num 3 failed
+    (FREE_WRAPPER) start - main free 0x6000010b4050
 
  - `(MALLOC_WRAPPER)`:
 everytime a malloc happens this will be printed on the stdout, with the last two functions in the stack at the happening of malloc(), the amount of bytes and the address allocated
@@ -106,3 +143,13 @@ everytime a free happens this will be printed on the stdout, with the last two f
 
  - `(MALLOC_FAIL)`:
 Every time your program executes the value of `--fail` times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
+
+There is also a leak report at the end of your program, "Malloc calls" doesn't include failed malloc
+
+    (MALLOC_REPORT)
+       Malloc calls: 2
+       Failed malloc: 1
+       Free calls: 1
+       Free calls to 0x0: 0
+    Leaks at exit:
+    From main of size 3 at address 0x6000003b4040
