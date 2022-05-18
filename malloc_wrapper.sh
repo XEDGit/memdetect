@@ -105,13 +105,13 @@ do
     (( I = I + 1 ))
 done
 
-if [ -z $FILE_PATH] && [ -z $PROJECT_PATH ]
+if [ -z $FILE_PATH -a  -z $PROJECT_PATH ]
 then
 	printf "Error: Missing --d or --f option.\n$HELP_MSG"
 	exit 1
 fi
 
-if  [ -z $FILE_PATH] && ! [ -d $PROJECT_PATH ]
+if  [ -z $FILE_PATH -a ! -d $PROJECT_PATH ]
 then
 	echo "Error: project_path is not a folder\n"
 	exit
@@ -137,20 +137,25 @@ typedef struct s_addr {
 static void		(*og_free)(void *);
 static void		*(*og_malloc)(size_t);
 static int 		free_count = 0;
+static int 		zero_free_count = 0;
 static int		malloc_count = 0;
+int const		addr_size = 10000;
 static int		addr_i = 0;
-static t_addr	addresses[10000] = {0};
+static int		addr_rep = 0;
+static t_addr	addresses[addr_size] = {0};
 
 void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_report()
 {
-	printf(RED \"(MALLOC_REPORT)\nmalloc calls: %d - free calls: %d\nLeaks:\n\" DEF, malloc_count, free_count);
+	printf(RED \"(MALLOC_REPORT)\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\nLeaks:\n\" DEF, malloc_count, free_count, zero_free_count);
+	if (addr_rep)
+		addr_i = addr_size;
 	for (int i = 0; i < addr_i; i++)
 	{
 		if (addresses[i].address)
 		{
-			printf(\"Leak from %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address)
+			printf(\"Leak from %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
@@ -199,12 +204,19 @@ void	*malloc(size_t size)
 		return (0);
 	}
 	ret = og_malloc(size);
-	if (addr_i == 10000)
+	addr_i++;
+	if (addr_i == addr_size)
+	{
+		addr_rep = 1;
 		addr_i = 0;
+	}
+	while (addr_i < addr_size - 1 && addresses[addr_i].address)
+		addr_i++;
+	if (addr_i == addr_size - 1)
+		printf(\"(MALLOC_ERROR) Not enough buffer space, leaks report will not be reliable\n\");
 	addresses[addr_i].function = strdup(&stack[2][59]);
 	addresses[addr_i].bytes = size;
 	addresses[addr_i].address = ret;
-	addr_i++;
 	printf(RED \"(MALLOC_WRAPPER) %s - %s allocated %zu bytes at %p\n\" DEF, &stack[3][59], &stack[2][59], size, ret);
 	og_free(stack);
 	return (ret);
@@ -213,29 +225,31 @@ void	*malloc(size_t size)
 void	free(void *tofree)
 {
 	char	**stack;
-	void	(*og_free)(void *);
 
 	if (!og_free)
 		if (!(og_free = dlsym(RTLD_NEXT, \"free\")))
 			return ;
-	free_count++;
 	malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
 	printf(RED \"(FREE_WRAPPER) %s/%s free %p\n\" DEF, \
 	&stack[3][59], &stack[2][59], tofree);
-	if (addr_i == 10000)
-		addr_i = 0;
-	for (int i=0; i < addr_i; i++)
+	if (tofree)
 	{
-		if (addresses[i].address == tofree)
+		free_count++;
+		for (int i=0; i <= addr_i; i++)
 		{
-			og_free(addresses[i].function);
-			addresses[i].function = 0;
-			addresses[i].bytes = 0;
-			addresses[i].address = 0;
+			if (addresses[i].address == tofree)
+			{
+				og_free(addresses[i].function);
+				addresses[i].function = 0;
+				addresses[i].bytes = 0;
+				addresses[i].address = 0;
+			}
 		}
 	}
+	else
+		zero_free_count++;
 	og_free(stack);
 	og_free(tofree);
 }
