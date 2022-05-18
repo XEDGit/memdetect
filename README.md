@@ -149,12 +149,11 @@ everytime a free happens this will be printed on the stdout, with the last two f
  - `(MALLOC_FAIL)`:
 Every time your program executes the value of `--fail` times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
 
-There is also a leak report at the end of your program, "Malloc calls" doesn't include failed malloc
+There is also a leak report at the end of your program, "Malloc calls" value doesn't include failed malloc
 
     (MALLOC_REPORT)
        Malloc calls: 2
-       Failed malloc: 1
        Free calls: 1
        Free calls to 0x0: 0
     Leaks at exit:
-    From main of size 3 at address 0x6000003b4040
+       From main of size 3 at address 0x6000003b4040
