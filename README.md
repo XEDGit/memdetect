@@ -32,7 +32,7 @@ You can integrate this program with Makefile by executing this command in your M
 ```shell
 echo >> ./Makefile '
 malloc_wrapper:
-    /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_LIBS) $(YOUR_HEADERS)"'
+    /path/to/malloc_wrapper.sh # --d /path/to/project --flags $(YOUR_FLAGS) $(YOUR_LIBS) $(YOUR_HEADERS)'
 ```
 
 ## Usage:
