@@ -6,18 +6,18 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
 ### Platform:
 
-🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen)" />
+ 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen)" />
 
 
-🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
+ 🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
 
 ### Enviroment:
 
-🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet)" />
+ 🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet)" />
 
 ### Output file:
 
- - malloc_debug
+ 📄 malloc_debug
 
 ## Setup:
 
