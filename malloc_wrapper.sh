@@ -20,11 +20,52 @@ HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_pat
 
 I=1
 
-# if [ $ARGS_LEN -lt 2 ]
-# then
-# 	printf "$HELP_MSG"
-#     exit 1
-# fi
+function add_to_path()
+{
+	PATH_ARR=($(echo $PATH | tr ':' '\n'))
+
+	CONT=0
+
+	CONT2=0
+
+	echo "In which path do you want to install it?"
+
+	for VAL in $PATH_ARR
+	do
+		printf "\t$CONT) $VAL\n"
+		(( CONT = CONT + 1 ))
+	done
+
+	printf "Select index: "
+
+	read -k${#CONT} PATH_CHOICE
+
+	printf "\n"
+
+	if [[ $PATH_CHOICE -lt 0 || $PATH_CHOICE -gt ($CONT - 1) || ! ($PATH_CHOICE =~ $RE) ]]
+	then
+		echo "Index not in range"
+		exit 1
+	fi
+
+	for VAL in $PATH_ARR
+	do
+		if [[ $C2 -eq $PATH_CHOICE ]]
+		then
+			PATH_CHOICE=$VAL
+			break
+		fi
+		(( CONT2 = CONT2 + 1 ))
+	done
+
+	if [ -w $PATH_CHOICE ]
+	then
+		cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
+	else
+		sudo cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
+	fi
+
+}
 
 while [[ $I -le $ARGS_LEN ]]
 do
@@ -101,6 +142,11 @@ do
 			printf "$HELP_MSG"
             exit
         ;;
+
+		"--add-path")
+			add_to_path
+			exit
+		;;
     esac
     (( I = I + 1 ))
 done
@@ -148,14 +194,14 @@ void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_report()
 {
-	printf(RED \"(MALLOC_REPORT)\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\nLeaks:\n\" DEF, malloc_count, free_count, zero_free_count);
+	printf(RED \"(MALLOC_REPORT)\n\tMalloc calls: %d\n\tFailed malloc: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\nLeaks at exit:\n\" DEF, malloc_count, malloc_fail_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = addr_size;
 	for (int i = 0; i < addr_i; i++)
 	{
 		if (addresses[i].address)
 		{
-			printf(\"Leak from %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
+			printf(\"From %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
@@ -195,14 +241,13 @@ void	*malloc(size_t size)
 	stack_size = malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	malloc_count++;
 	if (++malloc_fail == MALLOC_FAIL_INDEX)
 	{
 		printf(RED \"(MALLOC_FAIL) %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
-		malloc_fail = 0;
 		og_free(stack);
 		return (0);
 	}
+	malloc_count++;
 	ret = og_malloc(size);
 	addr_i++;
 	if (addr_i == addr_size)
