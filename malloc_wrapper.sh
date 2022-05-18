@@ -172,9 +172,9 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 
 #define RED \"\e[31m\"
 
-#define REDB \"\e[31;1m\"
+#define REDB \"\e[1;31m\"
 
-#define DEF \"\e[39m\"
+#define DEF \"\e[0m\"
 
 typedef struct s_addr {
 	void	*address;
@@ -198,8 +198,8 @@ void malloc_hook_report()
 {
 	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
-		addr_i = addr_size;
-	for (int i = 0; i < addr_i; i++)
+		addr_i = addr_size - 1;
+	for (int i = 0; i <= addr_i; i++)
 	{
 		if (addresses[i].address)
 		{
