@@ -193,6 +193,8 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 
 #define DEF \"\e[0m\"
 
+#define ADDR_ARR_SIZE 10000
+
 typedef struct s_addr {
 	void	*address;
 	char	*function;
@@ -204,10 +206,9 @@ static void		*(*og_malloc)(size_t);
 static int 		free_count = 0;
 static int 		zero_free_count = 0;
 static int		malloc_count = 0;
-int const		addr_size = 10000;
 static int		addr_i = 0;
 static int		addr_rep = 0;
-static t_addr	addresses[addr_size] = {0};
+static t_addr	addresses[ADDR_ARR_SIZE] = {0};
 
 void __attribute__((destructor)) malloc_hook_report();
 
@@ -218,7 +219,7 @@ void malloc_hook_report()
 	tot_leaks = 0;
 	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
-		addr_i = addr_size - 1;
+		addr_i = ADDR_ARR_SIZE - 1;
 	for (int i = 0; i <= addr_i; i++)
 	{
 		if (addresses[i].address)
@@ -273,14 +274,14 @@ void	*malloc(size_t size)
 	malloc_count++;
 	ret = og_malloc(size);
 	addr_i++;
-	if (addr_i == addr_size)
+	if (addr_i == ADDR_ARR_SIZE)
 	{
 		addr_rep = 1;
 		addr_i = 0;
 	}
-	while (addr_i < addr_size - 1 && addresses[addr_i].address)
+	while (addr_i < ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
 		addr_i++;
-	if (addr_i == addr_size - 1)
+	if (addr_i == ADDR_ARR_SIZE - 1)
 		printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, leaks report will not be reliable\n\");
 	addresses[addr_i].function = strdup(&stack[2][59]);
 	addresses[addr_i].bytes = size;
