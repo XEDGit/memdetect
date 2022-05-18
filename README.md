@@ -1,6 +1,6 @@
 # malloc_wrapper
 <img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
-This is a shell script to compile your file or project with a wrapper of malloc() and free() which is going to help you understand better your memory handling and debugging!
+This is a shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-handling and debugging better!
 
 ## Info:
 
@@ -22,7 +22,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 ## Setup:
 
 ### Adding malloc_wrapper to your $PATH:
-You can add this program to your $PATH by executing this command
+You can add this program to your $PATH by adding this flag
 
 ```console
 ./malloc_wrapper.sh --add-path
@@ -52,17 +52,19 @@ You can use this executable for compiling single files, multiple files or entire
    
  - #### Optional:
 
-   - `--e folder_to_exclude_name`: Specify a folder which is inside the `--d directory_path` but you want to exclude from compiling
+   - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
-   - `--a arg0 arg...`: Specify arguments to run with executable
+   - `--a arg0 arg...`: Specify arguments to run with the executable
 
  - ##### --fail:
 
-   - `--fail malloc_to_fail_number`: Specify which malloc should fail (return 0), 1 will fail first malloc and so on
+   - `--fail malloc_to_fail_number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-   - `--fail all`: Start a loop to compile your code and run it failing 1st malloc on 1st execution, 2nd on 2nd execution and so on
+   - `--fail all`: Adding this flag will fail all the malloc calls
+
+   - `--fail loop`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on
  
  - ##### --add-path: adds malloc_wrapper to a $PATH of your choice
 
@@ -141,16 +143,17 @@ int main(void)
     (FREE_WRAPPER) start - main free 0x6000010b4050
 
  - `(MALLOC_WRAPPER)`:
-everytime a malloc happens this will be printed on the stdout, with the last two functions in the stack at the happening of malloc(), the amount of bytes and the address allocated
+    - for each malloc call, it is printed on the stdout, with the last two functions in the stack, the amount of bytes and the address allocated
    
- - `(MALLOC_FREE)`:
-everytime a free happens this will be printed on the stdout, with the last two functions in the stack at the happening of malloc() and the address freed
+ - `(FREE_WRAPPER)`:
+    - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
 
  - `(MALLOC_FAIL)`:
-Every time your program executes the value of `--fail` times a malloc() this will be printed on the stdout with the  last two functions in the stack at the happening of malloc()
+    - when a malloc call gets failed by the `--fail` flag it will be printed on the stdout with the last two functions in the stack
 
-There is also a leak report at the end of your program, "Malloc calls" value doesn't include failed malloc
+After your program exits a leak report will be printed
 
+    Output:
     (MALLOC_REPORT)
        Malloc calls: 2
        Free calls: 1
