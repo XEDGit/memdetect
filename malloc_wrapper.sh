@@ -6,7 +6,9 @@ ARGS_LEN=${#ARGS[@]}
 
 RED="\e[31m"
 
-DEF="\e[39m"
+REDB="\e[1;31m"
+
+DEF="\e[0m"
 
 RE='^[0-9]+$'
 
@@ -67,6 +69,17 @@ function add_to_path()
 
 }
 
+# echo "$BRED __    __ ________ _______   ______  __   __     
+# |  \\  |  |        |       \\ /      \\|  \\ |  \\    
+# | \$\$  | \$| \$\$\$\$\$\$\$| \$\$\$\$\$\$\$|   \$\$\$\$\$\$\\\\\$\$_| \$\$_   
+#  \\\$\$\\/  \$| \$\$__   | \$\$  | \$| \$\$ __\\\$|  |   \$\$ \\  
+#   >\$\$  \$\$| \$\$  \\  | \$\$  | \$| \$\$|    | \$\$\\\$\$\$\$\$\$  
+#  /  \$\$\$\$\\| \$\$\$\$\$  | \$\$  | \$| \$\$ \\\$\$\$| \$\$ | \$\$ __ 
+# |  \$\$ \\\$\$| \$\$_____| \$\$__/ \$| \$\$__| \$| \$\$ | \$\$|  \\
+# | \$\$  | \$| \$\$     | \$\$    \$\$\\\$\$    \$| \$\$  \\\$\$  \$\$
+#  \\\$\$   \\\$\$\\\$\$\$\$\$\$\$\$\\\$\$\$\$\$\$\$  \\\$\$\$\$\$\$ \\\$\$   \\\$\$\$\$
+#  $DEF"
+
 while [[ $I -le $ARGS_LEN ]]
 do
     arg=${ARGS[$I]}
@@ -98,9 +111,12 @@ do
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
-				if [ $NEW_VAL = "all" ]
+				if [ $NEW_VAL = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
+				elif [ $NEW_VAL = "all" ]
+				then
+					MALLOC_FAIL_INDEX=-1
 				else
 					printf "Error: $arg argument is not a number."
 					exit 1
@@ -206,7 +222,7 @@ void malloc_hook_report()
 	{
 		if (addresses[i].address)
 		{
-			printf(\"%d)\tFrom %s of size %d at address %p\n\", tot_leaks++, addresses[i].function, addresses[i].bytes, addresses[i].address);
+			printf(\"%d)\tFrom %s of size %d at address %p\n\", ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
@@ -247,9 +263,9 @@ void	*malloc(size_t size)
 	stack_size = malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (++malloc_fail == MALLOC_FAIL_INDEX)
+	if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 	{
-		printf(REDB \"(MALLOC_FAIL)\" DEF RED \" %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
+		printf(REDB \"(MALLOC_FAIL)\" DEF \" %s - %s malloc num %d failed\n\", &stack[3][59], &stack[2][59], malloc_fail);
 		og_free(stack);
 		return (0);
 	}
@@ -268,7 +284,7 @@ void	*malloc(size_t size)
 	addresses[addr_i].function = strdup(&stack[2][59]);
 	addresses[addr_i].bytes = size;
 	addresses[addr_i].address = ret;
-	printf(REDB \"(MALLOC_WRAPPER)\" DEF RED \" %s - %s allocated %zu bytes at %p\n\" DEF, &stack[3][59], &stack[2][59], size, ret);
+	printf(REDB \"(MALLOC_WRAPPER)\" DEF \" %s - %s allocated %zu bytes at %p\n\", &stack[3][59], &stack[2][59], size, ret);
 	og_free(stack);
 	return (ret);
 }
@@ -283,7 +299,7 @@ void	free(void *tofree)
 	malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	printf(REDB \"(FREE_WRAPPER)\" DEF RED \" %s/%s free %p\n\" DEF, \
+	printf(REDB \"(FREE_WRAPPER)\" DEF \" %s/%s free %p\n\", \
 	&stack[3][59], &stack[2][59], tofree);
 	if (tofree)
 	{
@@ -328,24 +344,27 @@ then
 	    exit
 	fi
 	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
-	./malloc_debug $OUT_ARGS
+	sh -c "./malloc_debug $OUT_ARGS 2>&1" 
 else
 	COUNTER=0
 	CONTINUE="\n"
 	while [[ $COUNTER -ge 0 ]]
 	do
 		(( COUNTER = COUNTER + 1 ))
-		printf "Press any key to run with --fail $COUNTER or 'q' to quit: "
+		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
 		read -k1 CONTINUE
 		if [ $CONTINUE = "q" ]
 		then
 			rm "$PROJECT_PATH/fake_malloc.c"
 			printf "\nExiting\n"
 			exit 0
+		elif [ ! $CONTINUE = $'\n' ]
+		then
+			printf "\n"
 		fi
 		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
-		echo $RED$GCC_CMD$DEF
-		eval $GCC_CMD
+		printf "$REDB$GCC_CMD$DEF\n"
+		eval "$GCC_CMD"
 		if [[ $? == 0 ]]
 		then
 		    printf "$RED" "Success$DEF\n"
@@ -353,7 +372,8 @@ else
 			rm "$PROJECT_PATH/fake_malloc.c"
 		    exit
 		fi
-		printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
-		./malloc_debug $OUT_ARGS
+		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
+		sh -c "./malloc_debug $OUT_ARGS 2>&1"
 	done
 fi
+exit 0
