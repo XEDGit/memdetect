@@ -1,16 +1,19 @@
 # malloc_wrapper
-<img src="https://img.shields.io/badge/Tools-finished-brightgreen)" />
+<img src="https://img.shields.io/badge/Tools-debug-blueviolet)" />
 This is a shell script to compile your file or project with a wrapper of malloc() and free() which is going to help you debugging, you can also use it in combination with ‘leaks malloc_debug’
 
 ## Info:
 
 ### Platform:
 
- - MacOS 🍏
+🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen)" />
+
+
+🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
 
 ### Enviroment:
 
- - gcc
+<img src="https://img.shields.io/badge/C-gcc-blueviolet)" />
 
 ### Output file:
 
@@ -22,7 +25,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 You can add this program to your $PATH by executing this command
 
 ```console
-./malloc_wrapper --add-path
+./malloc_wrapper.sh --add-path
 ```
 from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
 
