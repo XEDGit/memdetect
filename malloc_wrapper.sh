@@ -172,6 +172,8 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 
 #define RED \"\e[31m\"
 
+#define REDB \"\e[31;1m\"
+
 #define DEF \"\e[39m\"
 
 typedef struct s_addr {
@@ -194,14 +196,14 @@ void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_report()
 {
-	printf(RED \"(MALLOC_REPORT)\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\nLeaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
+	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = addr_size;
 	for (int i = 0; i < addr_i; i++)
 	{
 		if (addresses[i].address)
 		{
-			printf(\"From %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
+			printf(\"\tFrom %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
@@ -243,7 +245,7 @@ void	*malloc(size_t size)
 	malloc_hook_string_edit(stack[3]);
 	if (++malloc_fail == MALLOC_FAIL_INDEX)
 	{
-		printf(RED \"(MALLOC_FAIL) %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
+		printf(REDB \"(MALLOC_FAIL)\" DEF RED \" %s - %s malloc num %d failed\n\" DEF, &stack[3][59], &stack[2][59], malloc_fail);
 		og_free(stack);
 		return (0);
 	}
@@ -258,11 +260,11 @@ void	*malloc(size_t size)
 	while (addr_i < addr_size - 1 && addresses[addr_i].address)
 		addr_i++;
 	if (addr_i == addr_size - 1)
-		printf(\"(MALLOC_ERROR) Not enough buffer space, leaks report will not be reliable\n\");
+		printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, leaks report will not be reliable\n\");
 	addresses[addr_i].function = strdup(&stack[2][59]);
 	addresses[addr_i].bytes = size;
 	addresses[addr_i].address = ret;
-	printf(RED \"(MALLOC_WRAPPER) %s - %s allocated %zu bytes at %p\n\" DEF, &stack[3][59], &stack[2][59], size, ret);
+	printf(REDB \"(MALLOC_WRAPPER)\" DEF RED \" %s - %s allocated %zu bytes at %p\n\" DEF, &stack[3][59], &stack[2][59], size, ret);
 	og_free(stack);
 	return (ret);
 }
@@ -277,7 +279,7 @@ void	free(void *tofree)
 	malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	printf(RED \"(FREE_WRAPPER) %s/%s free %p\n\" DEF, \
+	printf(REDB \"(FREE_WRAPPER)\" DEF RED \" %s/%s free %p\n\" DEF, \
 	&stack[3][59], &stack[2][59], tofree);
 	if (tofree)
 	{
