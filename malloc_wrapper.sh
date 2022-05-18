@@ -196,6 +196,9 @@ void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_report()
 {
+	int	tot_leaks;
+
+	tot_leaks = 0;
 	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = addr_size - 1;
@@ -203,10 +206,11 @@ void malloc_hook_report()
 	{
 		if (addresses[i].address)
 		{
-			printf(\"\tFrom %s of size %d at address %p\n\", addresses[i].function, addresses[i].bytes, addresses[i].address);
+			printf(\"%d)\tFrom %s of size %d at address %p\n\", tot_leaks++, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
+	printf(\"Total leaks: %d\n\", tot_leaks);
 }
 
 int	malloc_hook_backtrace_readable(char ***stack_readable)
