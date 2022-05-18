@@ -13,7 +13,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
 
 ### Enviroment:
 
-<img src="https://img.shields.io/badge/C-gcc-blueviolet)" />
+🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet)" />
 
 ### Output file:
 
