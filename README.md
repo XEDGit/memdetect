@@ -56,6 +56,8 @@ You can use this executable for compiling single files, multiple files or entire
    - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
+   
+   - `--include-ext`: Adding this flag will show on the output also the calls to malloc and free from outside your source files (only for Linux)  
 
    - `--filter arg`: Specify a string which will filter out results from the wrapper output if `arg` is in the calling function
    
@@ -95,10 +97,6 @@ You can use this executable for compiling single files, multiple files or entire
     ./malloc_wrapper.sh --d .. --fail loop --filter rl_ --flags -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
 
 ## Understanding the output:
-
-### Before:
-
-The optimal enviroment to run this wrapper is MacOS, since all the calls to malloc or free coming from outside the source files aren't redirected to the wrapper, it's possible that Linux is gonna have more noise of library functions calling malloc in the output in particular if you use libraries
 
 ### Reference:
 
