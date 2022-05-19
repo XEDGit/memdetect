@@ -18,7 +18,9 @@ OUT_ARGS=""
 
 ADDR_SIZE=10000
 
-EXCLUDE_RES=" "
+EXCLUDE_RES="xxxx"
+
+ONLY_SOURCE=1
 
 MALLOC_FAIL_INDEX=0
 
@@ -28,6 +30,7 @@ I=0
 
 function add_to_path()
 {
+
 	PATH_ARR=$(echo $PATH | tr ':' '\n')
 
 	CONT=0
@@ -48,36 +51,22 @@ function add_to_path()
 
 	printf "\n"
 
-	if [[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $(($CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]
-	then
-		echo "Index not in range"
-		exit 1
-	fi
+	([[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $(($CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]) && echo "Index not in range" && exit 1
 
 	for VAL in $PATH_ARR
 	do
-		if [[ $C2 -eq $PATH_CHOICE ]]
-		then
-			PATH_CHOICE=$VAL
-			break
-		fi
+		[[ $CONT2 -eq $PATH_CHOICE ]] && PATH_CHOICE=$VAL && break
 		(( CONT2 = CONT2 + 1 ))
 	done
 
-	if [ ! -e "./malloc_wrapper.sh" ]
-	then
-		printf "Error: ./malloc_wrapper.sh not found\n"
-		exit 1
-	fi
+	[ ! -e "./malloc_wrapper.sh" ] && printf "Error: ./malloc_wrapper.sh not found\n" && exit 1
 
-	if [ -w $PATH_CHOICE ]
-	then
-		cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
-	else
-		sudo cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
-	fi
+	[ ! -e $PATH_CHOICE ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
+
+	[ -w $PATH_CHOICE ] && cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper || sudo cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
 
 	printf "Done!\n"
+
 }
 
 printf "$REDB============== malloc_wrapper by: ===============
@@ -106,16 +95,8 @@ do
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				if [[ ${ARGS[$I]} = "--"* ]]
-				then
-					(( I = I - 1 ))
-					break
-				fi
-				if [ ! -e "./malloc_wrapper.sh" ]
-				then
-					printf "Error: ${ARGS[$I]} not found\n"
-					exit 1
-				fi
+				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
+				[ ! -e "./malloc_wrapper.sh" ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
 				FILE_PATH+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -127,6 +108,10 @@ do
 
 		"--filter")
 			EXCLUDE_RES=${ARGS[$I + 1]}
+		;;
+
+		"--include-ext")
+			ONLY_SOURCE=0
 		;;
 
 		"--fail")
@@ -152,11 +137,7 @@ do
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				if [[ ${ARGS[$I]} = "--"* ]]
-				then
-					(( I = I - 1 ))
-					break
-				fi
+				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
 				GCC_FLAGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -166,21 +147,14 @@ do
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				if [[ ${ARGS[$I]} = "--"* ]]
-				then
-					(( I = I - 1 ))
-					break
-				fi
+				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
 				OUT_ARGS+=("${ARGS[$I]}")
 				(( I = I + 1 ))
 			done
 		;;
 
 		"--leaks-buff")
-			if ! [[ $NEW_VAL =~ $RE ]]
-			then
-				printf "Error: the value of --leaks-buff '$arg' is not a number"
-			fi
+			! [[ $NEW_VAL =~ $RE ]] && printf "Error: the value of --leaks-buff '$arg' is not a number" && exit 1
 			ADDR_SIZE=$NEW_VAL
 		;;
 
@@ -197,17 +171,9 @@ do
     (( I = I + 1 ))
 done
 
-if [ -z $FILE_PATH ] && [ -z $PROJECT_PATH ]
-then
-	printf "Error: Missing --d or --f option.\n$HELP_MSG"
-	exit 1
-fi
+[ -z $FILE_PATH ] && [ -z $PROJECT_PATH ]  && printf "Error: Missing --d or --f option.\n$HELP_MSG" && exit 1
 
-if  [ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ]
-then
-	echo "Error: project_path is not a folder\n"
-	exit
-fi
+[ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ] && echo "Error: project_path is not a folder\n" && exit 1
 
 eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #define _GNU_SOURCE
@@ -323,14 +289,20 @@ void	*malloc(size_t size)
 
 	if (!og_malloc)
 		if (init_malloc_hook())
-			return (0);
+			exit (1);
 	if (init_run)
 		return (og_malloc(size));
 	init_run = 1;
 	stack_size = malloc_hook_backtrace_readable(&stack);
+	if (ONLY_SOURCE && stack[2][0] != '.')
+	{
+		og_free(stack);
+		init_run = 0;
+		return (og_malloc(size));
+	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && strcmp(stack[2], \"xmalloc\") && strcmp(stack[2], \"xrealloc\") && !strstr(stack[2], EXCLUDE_RES ))
+	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES))
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
@@ -353,7 +325,7 @@ void	*malloc(size_t size)
 		{
 			printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
 			og_free(stack);
-			return (0);
+			exit (1);
 		}
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
@@ -380,9 +352,15 @@ void	free(void *tofree)
 	}
 	init_run = 1;
 	malloc_hook_backtrace_readable(&stack);
+	if (ONLY_SOURCE && stack[2][0] != '.')
+	{
+		og_free(stack);
+		init_run = 0;
+		return ;
+	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && strcmp(stack[2], \"xmalloc\") && strcmp(stack[2], \"xrealloc\") && !strstr(stack[2], EXCLUDE_RES ))
+	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES))
 	{
 		printf(REDB \"(FREE_WRAPPER)\" DEF \" %s - %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
@@ -409,57 +387,54 @@ void	free(void *tofree)
 
 EOF"
 
-if [ -z $FILE_PATH ]
-then
-	SRC=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ')
-else
-	SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
-fi
+[ -z $FILE_PATH ] && SRC=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ') || SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
 
 if [ -z $MALLOC_FAIL_LOOP ]
 then
-	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	
+	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	
 	echo $RED$GCC_CMD$DEF
+	
 	eval $GCC_CMD
-	if [[ $? == 0 ]]
-	then
-		rm "$PROJECT_PATH/fake_malloc.c"
-	    printf "$RED" "Success$DEF\n"
-	else
-		rm "$PROJECT_PATH/fake_malloc.c"
-	    exit
-	fi
+	
+	[[ $? == 0 ]] && (rm "$PROJECT_PATH/fake_malloc.c" && printf "$RED" "Success$DEF\n") || (rm "$PROJECT_PATH/fake_malloc.c" && exit)
+	
 	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	
 	sh -c "./malloc_debug $OUT_ARGS 2>&1" 
+
 else
+	
 	COUNTER=0
+	
 	CONTINUE=""
+	
 	while [[ $COUNTER -ge 0 ]]
 	do
+		
 		(( COUNTER = COUNTER + 1 ))
+		
 		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
+		
 		read -rn1 CONTINUE
-		if [ "$CONTINUE" == "q" ]
-		then
-			rm "$PROJECT_PATH/fake_malloc.c"
-			printf "\nExiting\n"
-			exit 0
-		elif [ ! $CONTINUE = $'\n' ]
-		then
-			printf "\n"
-		fi
-		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		
+		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+
+		[ ! $CONTINUE = $'\n' ] && printf "\n"
+		
+		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		
 		printf "$REDB$GCC_CMD$DEF\n"
+		
 		eval "$GCC_CMD"
-		if [[ $? == 0 ]]
-		then
-		    printf "$RED" "Success$DEF\n"
-		else
-			rm "$PROJECT_PATH/fake_malloc.c"
-		    exit
-		fi
+		
+		[[ $? == 0 ]] && printf "$RED" "Success$DEF\n" || (rm "$PROJECT_PATH/fake_malloc.c" && exit)
+		
 		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
+		
 		sh -c "./malloc_debug $OUT_ARGS 2>&1"
+
 	done
 fi
 exit 0
