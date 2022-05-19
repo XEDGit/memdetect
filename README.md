@@ -98,7 +98,7 @@ You can use this executable for compiling single files, multiple files or entire
 
 ### Before:
 
-The optimal enviroment is MacOS, since all the calls to malloc or free coming from outside the source files aren't redirected to the wrapper, so Linux is gonna have more noise in the output in particular if you use libraries
+The optimal enviroment to run this wrapper is MacOS, since all the calls to malloc or free coming from outside the source files aren't redirected to the wrapper, it's possible that Linux is gonna have more noise of library functions calling malloc in the output in particular if you use libraries
 
 ### Example:
 
