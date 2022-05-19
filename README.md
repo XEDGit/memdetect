@@ -100,6 +100,19 @@ You can use this executable for compiling single files, multiple files or entire
 
 The optimal enviroment to run this wrapper is MacOS, since all the calls to malloc or free coming from outside the source files aren't redirected to the wrapper, it's possible that Linux is gonna have more noise of library functions calling malloc in the output in particular if you use libraries
 
+### Reference:
+
+ - `(MALLOC_WRAPPER)`:
+    - for each malloc call, it is printed on the stdout, with the last two functions in the stack, the amount of bytes and the address allocated
+   
+ - `(FREE_WRAPPER)`:
+    - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
+
+ - `(MALLOC_FAIL)`:
+    - when a malloc call gets failed by the `--fail` flag it will be printed on the stdout with the last two functions in the stack
+
+After your program exits a leak report will be printed
+
 ### Example:
 
 #### Input:
@@ -145,24 +158,12 @@ int main(void)
 }
 ```
 
-    Output:
+#### Output:
+    
     (MALLOC_WRAPPER) start - main allocated 3 bytes at 0x6000010b4040
     (MALLOC_WRAPPER) main - strdup allocated 3 bytes at 0x6000010b4050
     (MALLOC_FAIL) main - ft_strdup malloc num 3 failed
     (FREE_WRAPPER) start - main free 0x6000010b4050
-
- - `(MALLOC_WRAPPER)`:
-    - for each malloc call, it is printed on the stdout, with the last two functions in the stack, the amount of bytes and the address allocated
-   
- - `(FREE_WRAPPER)`:
-    - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
-
- - `(MALLOC_FAIL)`:
-    - when a malloc call gets failed by the `--fail` flag it will be printed on the stdout with the last two functions in the stack
-
-After your program exits a leak report will be printed
-
-    Output:
     (MALLOC_REPORT)
        Malloc calls: 2
        Free calls: 1
