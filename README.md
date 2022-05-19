@@ -111,6 +111,9 @@ The optimal enviroment to run this wrapper is MacOS, since all the calls to mall
  - `(MALLOC_FAIL)`:
     - when a malloc call gets failed by the `--fail` flag it will be printed on the stdout with the last two functions in the stack
 
+ - `(MALLOC_ERROR)`:
+    - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` with a bigger value than default (10000) to fix this
+
 After your program exits a leak report will be printed
 
 ### Example:
