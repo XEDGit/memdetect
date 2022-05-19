@@ -1,6 +1,6 @@
 # malloc_wrapper
 <img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
-This is a shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-handling and debugging better!
+This is a shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debugging better!
 
 ## Info:
 
