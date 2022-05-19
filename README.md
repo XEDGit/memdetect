@@ -56,14 +56,14 @@ You can use this executable for compiling single files, multiple files or entire
    - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
-   
-   - `--include-ext`: **(only for Linux)** Adding this flag will include in the output the calls to malloc and free from outside your source files
 
    - `--filter arg`: Specify a string which will filter out results from the wrapper output if `arg` is in the calling function
    
    - `--a arg0 arg...`: Specify arguments to run with the executable
 
    - `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+   
+   - `--include-ext`: **(only for Linux)** Adding this flag will include in the output the calls to malloc and free from outside your source files
 
  - ##### --fail (Use only one):
 
@@ -97,6 +97,8 @@ You can use this executable for compiling single files, multiple files or entire
     ./malloc_wrapper.sh --d .. --fail loop --filter rl_ --flags -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
 
 ## Understanding the output:
+
+The output will contain malloc calls coming from the source file, which means it will not contain the calls from library functions, for example if you use *strdup()* the malloc call done by *strdup()* will not be shown. This can be bypassed on Linux by including the `--include-ext` flag
 
 ### Reference:
 
