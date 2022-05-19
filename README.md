@@ -57,7 +57,7 @@ You can use this executable for compiling single files, multiple files or entire
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
    
-   - `--include-ext`: Adding this flag will show on the output also the calls to malloc and free from outside your source files (only for Linux)  
+   - `--include-ext`: **(only for Linux)** Adding this flag will include in the output the calls to malloc and free from outside your source files
 
    - `--filter arg`: Specify a string which will filter out results from the wrapper output if `arg` is in the calling function
    
