@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 ARGS=("$@")
 
@@ -16,15 +16,19 @@ GCC_FLAGS=""
 
 OUT_ARGS=""
 
+ADDR_SIZE=10000
+
+EXCLUDE_RES=" "
+
 MALLOC_FAIL_INDEX=0
 
 HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--fail malloc_to_fail_index] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
 
-I=1
+I=0
 
 function add_to_path()
 {
-	PATH_ARR=($(echo $PATH | tr ':' '\n'))
+	PATH_ARR=$(echo $PATH | tr ':' '\n')
 
 	CONT=0
 
@@ -40,11 +44,11 @@ function add_to_path()
 
 	printf "Select index: "
 
-	read -k${#CONT} PATH_CHOICE
+	read -n${#CONT} PATH_CHOICE
 
 	printf "\n"
 
-	if [[ $PATH_CHOICE -lt 0 || $PATH_CHOICE -gt ($CONT - 1) || ! ($PATH_CHOICE =~ $RE) ]]
+	if [[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $(($CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]
 	then
 		echo "Index not in range"
 		exit 1
@@ -60,6 +64,12 @@ function add_to_path()
 		(( CONT2 = CONT2 + 1 ))
 	done
 
+	if [ ! -e "./malloc_wrapper.sh" ]
+	then
+		printf "Error: ./malloc_wrapper.sh not found\n"
+		exit 1
+	fi
+
 	if [ -w $PATH_CHOICE ]
 	then
 		cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
@@ -67,9 +77,10 @@ function add_to_path()
 		sudo cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
 	fi
 
+	printf "Done!\n"
 }
 
-echo "$REDB Malloc_Wrapper by:
+printf "$REDB============== malloc_wrapper by: ===============
  __    __ ________ _______   ______  __   __     
 |  \\  |  |        |       \\ /      \\|  \\ |  \\    
 | \$\$  | \$| \$\$\$\$\$\$\$| \$\$\$\$\$\$\$|   \$\$\$\$\$\$\\\\\$\$_| \$\$_   
@@ -79,6 +90,7 @@ echo "$REDB Malloc_Wrapper by:
 |  \$\$ \\\$\$| \$\$_____| \$\$__/ \$| \$\$__| \$| \$\$ | \$\$|  \\
 | \$\$  | \$| \$\$     | \$\$    \$\$\\\$\$    \$| \$\$  \\\$\$  \$\$
  \\\$\$   \\\$\$\\\$\$\$\$\$\$\$\$\\\$\$\$\$\$\$\$  \\\$\$\$\$\$\$ \\\$\$   \\\$\$\$\$
+ ================================================
  $DEF"
 
 while [[ $I -le $ARGS_LEN ]]
@@ -99,6 +111,11 @@ do
 					(( I = I - 1 ))
 					break
 				fi
+				if [ ! -e "./malloc_wrapper.sh" ]
+				then
+					printf "Error: ${ARGS[$I]} not found\n"
+					exit 1
+				fi
 				FILE_PATH+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -108,18 +125,22 @@ do
 			EXCLUDE+="! -path '*${ARGS[$I + 1]}*' "
         ;;
 
+		"--filter")
+			EXCLUDE_RES=${ARGS[$I + 1]}
+		;;
+
 		"--fail")
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
-				if [ $NEW_VAL = "loop" ]
+				if [ "$NEW_VAL" = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
-				elif [ $NEW_VAL = "all" ]
+				elif [ "$NEW_VAL" = "all" ]
 				then
 					MALLOC_FAIL_INDEX=-1
 				else
-					printf "Error: $arg argument is not a number."
+					printf "Error: the value of --fail '$arg' is not a number, 'all' or 'loop'."
 					exit 1
 				fi
 			else
@@ -155,6 +176,14 @@ do
 			done
 		;;
 
+		"--leaks-buff")
+			if ! [[ $NEW_VAL =~ $RE ]]
+			then
+				printf "Error: the value of --leaks-buff '$arg' is not a number"
+			fi
+			ADDR_SIZE=$NEW_VAL
+		;;
+
         "--h")
 			printf "$HELP_MSG"
             exit
@@ -168,13 +197,13 @@ do
     (( I = I + 1 ))
 done
 
-if [ -z $FILE_PATH -a  -z $PROJECT_PATH ]
+if [ -z $FILE_PATH ] && [ -z $PROJECT_PATH ]
 then
 	printf "Error: Missing --d or --f option.\n$HELP_MSG"
 	exit 1
 fi
 
-if  [ -z $FILE_PATH -a ! -d $PROJECT_PATH ]
+if  [ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ]
 then
 	echo "Error: project_path is not a folder\n"
 	exit
@@ -186,14 +215,19 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <execinfo.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#ifdef __APPLE__
+# define MAC_OS_SYSTEM 1
+#else
+# define MAC_OS_SYSTEM 0
+#endif
 
 #define RED \"\e[31m\"
 
 #define REDB \"\e[1;31m\"
 
 #define DEF \"\e[0m\"
-
-#define ADDR_ARR_SIZE 10000
 
 typedef struct s_addr {
 	void	*address;
@@ -204,6 +238,7 @@ typedef struct s_addr {
 static void		(*og_free)(void *);
 static void		*(*og_malloc)(size_t);
 static int 		free_count = 0;
+static int		init_run = 0;
 static int 		zero_free_count = 0;
 static int		malloc_count = 0;
 static int		addr_i = 0;
@@ -217,18 +252,29 @@ void malloc_hook_report()
 	int	tot_leaks;
 
 	tot_leaks = 0;
-	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: %d\n\tFree calls: %d\n\tFree calls to 0x0: %d\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
+	init_run = 1;
+	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: \" RED \"%d\" DEF \"\n\tFree calls: \" RED \"%d\" DEF \"\n\tFree calls to 0x0: \" RED \"%d\" DEF \"\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = ADDR_ARR_SIZE - 1;
 	for (int i = 0; i <= addr_i; i++)
 	{
 		if (addresses[i].address)
 		{
-			printf(\"%d)\tFrom %s of size %d at address %p\n\", ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
+			printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			og_free(addresses[i].function);
 		}
 	}
-	printf(\"Total leaks: %d\n\", tot_leaks);
+	printf(REDB \"Total leaks: %d\n\" DEF, tot_leaks);
+}
+
+int init_malloc_hook()
+{
+	og_malloc = dlsym(RTLD_NEXT, \"malloc\");
+    og_free = dlsym(RTLD_NEXT, \"free\");
+
+    if (!og_malloc || !og_free)
+        exit(1);
+	return (0);
 }
 
 int	malloc_hook_backtrace_readable(char ***stack_readable)
@@ -243,10 +289,29 @@ int	malloc_hook_backtrace_readable(char ***stack_readable)
 
 void	malloc_hook_string_edit(char *str)
 {
-	str = &str[59];
-	while (*str && *str != ' ')
-		str++;
-	*str = 0;
+	char	ch;
+	char	*start;
+	char	*temp;
+
+	ch = ' ';
+	start = str;
+	temp = str;
+	if (!MAC_OS_SYSTEM)
+	{
+		ch = '+';
+		while (*str && *(str - 1) != '(')
+			str++;
+	}
+	else
+		str = &str[59];
+	while (*str && *str != ch)
+		*start++ = *str++;
+	if (start == temp)
+	{
+		*start++ = '?';
+		*start++ = '?';
+	}
+	*start = 0;
 }
 
 void	*malloc(size_t size)
@@ -257,36 +322,47 @@ void	*malloc(size_t size)
 	static int	malloc_fail = 0;
 
 	if (!og_malloc)
-		if (!(og_malloc = dlsym(RTLD_NEXT, \"malloc\")))
+		if (init_malloc_hook())
 			return (0);
-	if (!og_free)
-		if (!(og_free = dlsym(RTLD_NEXT, \"free\")))
-			return (0);
+	if (init_run)
+		return (og_malloc(size));
+	init_run = 1;
 	stack_size = malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
+	if (stack[2][0] != '?' && strcmp(stack[2], \"xmalloc\") && strcmp(stack[2], \"xrealloc\") && !strstr(stack[2], EXCLUDE_RES ))
 	{
-		printf(REDB \"(MALLOC_FAIL)\" DEF \" %s - %s malloc num %d failed\n\", &stack[3][59], &stack[2][59], malloc_fail);
-		og_free(stack);
-		return (0);
-	}
-	malloc_count++;
-	ret = og_malloc(size);
-	addr_i++;
-	if (addr_i == ADDR_ARR_SIZE)
-	{
-		addr_rep = 1;
-		addr_i = 0;
-	}
-	while (addr_i < ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
+		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
+		{
+			printf(REDB \"(MALLOC_FAIL)\" DEF \" %s - %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
+			og_free(stack);
+			init_run = 0;
+			return (0);
+		}
+		malloc_count++;
+		ret = og_malloc(size);
 		addr_i++;
-	if (addr_i == ADDR_ARR_SIZE - 1)
-		printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, leaks report will not be reliable\n\");
-	addresses[addr_i].function = strdup(&stack[2][59]);
-	addresses[addr_i].bytes = size;
-	addresses[addr_i].address = ret;
-	printf(REDB \"(MALLOC_WRAPPER)\" DEF \" %s - %s allocated %zu bytes at %p\n\", &stack[3][59], &stack[2][59], size, ret);
+		if (addr_i == ADDR_ARR_SIZE)
+		{
+			addr_rep = 1;
+			addr_i = 0;
+		}
+		while (addr_i < ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
+			addr_i++;
+		if (addr_i == ADDR_ARR_SIZE - 1)
+		{
+			printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
+			og_free(stack);
+			return (0);
+		}
+		addresses[addr_i].function = strdup(stack[2]);
+		addresses[addr_i].bytes = size;
+		addresses[addr_i].address = ret;
+		printf(REDB \"(MALLOC_WRAPPER)\" DEF \" %s - %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
+	}
+	else
+		ret = og_malloc(size);
+	init_run = 0;
 	og_free(stack);
 	return (ret);
 }
@@ -296,29 +372,37 @@ void	free(void *tofree)
 	char	**stack;
 
 	if (!og_free)
-		if (!(og_free = dlsym(RTLD_NEXT, \"free\")))
-			return ;
+		exit(1);
+	if (init_run)
+	{
+		og_free(tofree);
+		return ;
+	}
+	init_run = 1;
 	malloc_hook_backtrace_readable(&stack);
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	printf(REDB \"(FREE_WRAPPER)\" DEF \" %s/%s free %p\n\", \
-	&stack[3][59], &stack[2][59], tofree);
-	if (tofree)
+	if (stack[2][0] != '?' && strcmp(stack[2], \"xmalloc\") && strcmp(stack[2], \"xrealloc\") && !strstr(stack[2], EXCLUDE_RES ))
 	{
-		free_count++;
-		for (int i=0; i <= addr_i; i++)
+		printf(REDB \"(FREE_WRAPPER)\" DEF \" %s - %s free %p\n\", stack[3], stack[2], tofree);
+		if (tofree)
 		{
-			if (addresses[i].address == tofree)
+			free_count++;
+			for (int i=0; i <= addr_i; i++)
 			{
-				og_free(addresses[i].function);
-				addresses[i].function = 0;
-				addresses[i].bytes = 0;
-				addresses[i].address = 0;
+				if (addresses[i].address == tofree)
+				{
+					og_free(addresses[i].function);
+					addresses[i].function = 0;
+					addresses[i].bytes = 0;
+					addresses[i].address = 0;
+				}
 			}
 		}
+		else
+			zero_free_count++;
 	}
-	else
-		zero_free_count++;
+	init_run = 0;
 	og_free(stack);
 	og_free(tofree);
 }
@@ -334,7 +418,7 @@ fi
 
 if [ -z $MALLOC_FAIL_LOOP ]
 then
-	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
 	echo $RED$GCC_CMD$DEF
 	eval $GCC_CMD
 	if [[ $? == 0 ]]
@@ -349,13 +433,13 @@ then
 	sh -c "./malloc_debug $OUT_ARGS 2>&1" 
 else
 	COUNTER=0
-	CONTINUE="\n"
+	CONTINUE=""
 	while [[ $COUNTER -ge 0 ]]
 	do
 		(( COUNTER = COUNTER + 1 ))
 		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
-		read -k1 CONTINUE
-		if [ $CONTINUE = "q" ]
+		read -rn1 CONTINUE
+		if [ "$CONTINUE" == "q" ]
 		then
 			rm "$PROJECT_PATH/fake_malloc.c"
 			printf "\nExiting\n"
@@ -364,7 +448,7 @@ else
 		then
 			printf "\n"
 		fi
-		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
 		printf "$REDB$GCC_CMD$DEF\n"
 		eval "$GCC_CMD"
 		if [[ $? == 0 ]]

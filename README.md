@@ -9,7 +9,7 @@ This is a shell script to compile your file or project with a wrapper of malloc(
   - 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen" />
 
 
-  - 🐧 <img src="https://img.shields.io/badge/Linux-not%20working-red" />
+  - 🐧 <img src="https://img.shields.io/badge/Linux-working-brightgreen" />
 
 ### Enviroment:
 
@@ -57,7 +57,11 @@ You can use this executable for compiling single files, multiple files or entire
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
+   - `--filter arg`: Specify a string which will filter out results from the output if arg is in the calling function
+   
    - `--a arg0 arg...`: Specify arguments to run with the executable
+
+   - `--leaks-buff new_size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
 
  - ##### --fail:
 
@@ -88,9 +92,13 @@ You can use this executable for compiling single files, multiple files or entire
 
 #### Run with options
 
-    ./malloc_wrapper.sh --d .. --flags -Isrc/ft_printf -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
+    ./malloc_wrapper.sh --d .. --fail loop --filter rl_ --flags -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
 
 ## Understanding the output:
+
+### Before:
+
+The optimal enviroment is MacOS, since all the calls to malloc or free coming from outside the source files aren't redirected to the wrapper, so Linux is gonna have more noise in the output in particular if you use libraries
 
 ### Example:
 
@@ -160,4 +168,4 @@ After your program exits a leak report will be printed
        Free calls: 1
        Free calls to 0x0: 0
     Leaks at exit:
-       From main of size 3 at address 0x6000003b4040
+    1) From main of size 3 at address 0x6000003b4040
