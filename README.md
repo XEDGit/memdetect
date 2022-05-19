@@ -57,7 +57,7 @@ You can use this executable for compiling single files, multiple files or entire
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
-   - `--filter arg`: Specify a string which will filter out results from the output if arg is in the calling function
+   - `--filter arg`: Specify a string which will filter out results from the wrapper output if `arg` is in the calling function
    
    - `--a arg0 arg...`: Specify arguments to run with the executable
 
