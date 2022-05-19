@@ -61,11 +61,11 @@ You can use this executable for compiling single files, multiple files or entire
    
    - `--a arg0 arg...`: Specify arguments to run with the executable
 
-   - `--leaks-buff new_size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+   - `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
 
- - ##### --fail:
+ - ##### --fail (Use only one):
 
-   - `--fail malloc_to_fail_number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+   - `--fail number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
    - `--fail all`: Adding this flag will fail all the malloc calls
 
