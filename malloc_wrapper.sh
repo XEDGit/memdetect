@@ -294,7 +294,7 @@ void	*malloc(size_t size)
 		return (og_malloc(size));
 	init_run = 1;
 	stack_size = malloc_hook_backtrace_readable(&stack);
-	if (!MACOS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
+	if (!MAC_OS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
 	{
 		og_free(stack);
 		init_run = 0;
@@ -352,7 +352,7 @@ void	free(void *tofree)
 	}
 	init_run = 1;
 	malloc_hook_backtrace_readable(&stack);
-	if (!MACOS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
+	if (!MAC_OS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
 	{
 		og_free(stack);
 		init_run = 0;
