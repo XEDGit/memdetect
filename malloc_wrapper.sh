@@ -28,6 +28,66 @@ HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_pat
 
 I=0
 
+function loop()
+{
+	COUNTER=0
+	
+	CONTINUE=""
+	
+	while [[ $COUNTER -ge 0 ]]
+	do
+		
+		(( COUNTER = COUNTER + 1 ))
+		
+		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
+		
+		read -rn1 CONTINUE
+		
+		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+
+		[ ! $CONTINUE = $'\n' ] && printf "\n"
+		
+		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		
+		printf "$REDB$GCC_CMD$DEF\n"
+		
+		sh -c "$GCC_CMD 2>&1"
+
+		if [[ $? != 0 ]]
+		then
+			continue
+		fi
+		
+		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
+		
+		sh -c "./malloc_debug $OUT_ARGS 2>&1"
+
+	done
+
+	rm "$PROJECT_PATH/fake_malloc.c"
+}
+
+function run()
+{
+	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	
+	printf "$REDB$GCC_CMD$DEF\n"
+	
+	sh -c "$GCC_CMD 2>&1" 
+
+	if [[ $? != 0 ]]
+	then
+		rm "$PROJECT_PATH/fake_malloc.c"
+		exit 1
+	fi
+
+	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	
+	sh -c "./malloc_debug $OUT_ARGS 2>&1"
+
+	rm "$PROJECT_PATH/fake_malloc.c"
+}
+
 function add_to_path()
 {
 
@@ -391,62 +451,8 @@ EOF"
 
 if [ -z $MALLOC_FAIL_LOOP ]
 then
-	
-	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
-	
-	printf "$REDB$GCC_CMD$DEF\n"
-	
-	sh -c "$GCC_CMD 2>&1" 
-
-	if [[ $? != 0 ]]
-	then
-		rm "$PROJECT_PATH/fake_malloc.c"
-		exit 1
-	fi
-
-	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
-	
-	sh -c "./malloc_debug $OUT_ARGS 2>&1"
-
-	rm "$PROJECT_PATH/fake_malloc.c"
-
+	run
 else
-	
-	COUNTER=0
-	
-	CONTINUE=""
-	
-	while [[ $COUNTER -ge 0 ]]
-	do
-		
-		(( COUNTER = COUNTER + 1 ))
-		
-		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
-		
-		read -rn1 CONTINUE
-		
-		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
-
-		[ ! $CONTINUE = $'\n' ] && printf "\n"
-		
-		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
-		
-		printf "$REDB$GCC_CMD$DEF\n"
-		
-		sh -c "$GCC_CMD 2>&1"
-
-		if [[ $? != 0 ]]
-		then
-			continue
-		fi
-		
-		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
-		
-		sh -c "./malloc_debug $OUT_ARGS 2>&1"
-
-	done
-
-	rm "$PROJECT_PATH/fake_malloc.c"
-
+	loop
 fi
 exit 0
