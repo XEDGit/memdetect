@@ -96,7 +96,7 @@ do
 			while [[ $I -le $ARGS_LEN ]]
 			do
 				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
-				[ ! -e "./malloc_wrapper.sh" ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
+				[ ! -e "${ARGS[$I]}" ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
 				FILE_PATH+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -173,7 +173,7 @@ done
 
 [ -z $FILE_PATH ] && [ -z $PROJECT_PATH ]  && printf "Error: Missing --d or --f option.\n$HELP_MSG" && exit 1
 
-[ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ] && echo "Error: project_path is not a folder\n" && exit 1
+[ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ] && echo "Error: $PROJECT_PATH is not a folder\n" && exit 1
 
 eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #define _GNU_SOURCE
@@ -394,15 +394,21 @@ then
 	
 	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
 	
-	echo $RED$GCC_CMD$DEF
+	printf "$REDB$GCC_CMD$DEF\n"
 	
-	eval $GCC_CMD
-	
-	[[ $? == 0 ]] && (rm "$PROJECT_PATH/fake_malloc.c" && printf "$RED" "Success$DEF\n") || (rm "$PROJECT_PATH/fake_malloc.c" && exit)
-	
+	sh -c "$GCC_CMD 2>&1" 
+
+	if [[ $? != 0 ]]
+	then
+		rm "$PROJECT_PATH/fake_malloc.c"
+		exit 1
+	fi
+
 	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
 	
-	sh -c "./malloc_debug $OUT_ARGS 2>&1" 
+	sh -c "./malloc_debug $OUT_ARGS 2>&1"
+
+	rm "$PROJECT_PATH/fake_malloc.c"
 
 else
 	
@@ -427,14 +433,20 @@ else
 		
 		printf "$REDB$GCC_CMD$DEF\n"
 		
-		eval "$GCC_CMD"
-		
-		[[ $? == 0 ]] && printf "$RED" "Success$DEF\n" || (rm "$PROJECT_PATH/fake_malloc.c" && exit)
+		sh -c "$GCC_CMD 2>&1"
+
+		if [[ $? != 0 ]]
+		then
+			continue
+		fi
 		
 		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
 		
 		sh -c "./malloc_debug $OUT_ARGS 2>&1"
 
 	done
+
+	rm "$PROJECT_PATH/fake_malloc.c"
+
 fi
 exit 0
