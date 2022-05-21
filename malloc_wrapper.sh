@@ -18,11 +18,20 @@ OUT_ARGS=""
 
 ADDR_SIZE=10000
 
-EXCLUDE_RES="xxxx"
+EXCLUDE_RES="*&__@"
 
 ONLY_SOURCE=1
 
 MALLOC_FAIL_INDEX=0
+
+AS_COMM=""
+
+AS_FUNC=""
+
+AS_OG="og_"
+
+SRC=""
+
 
 HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--fail malloc_to_fail_index] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
 
@@ -60,11 +69,61 @@ function loop()
 		
 		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
 		
-		sh -c "./malloc_debug $OUT_ARGS 2>&1"
+		sh -c "$FAKE_MALLOC_DYLD./malloc_debug $OUT_ARGS 2>&1"
 
 	done
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+}
+
+function loop_osx()
+{
+	COUNTER=0
+	
+	CONTINUE=""
+	
+	while [[ $COUNTER -ge 0 ]]
+	do
+		
+		(( COUNTER = COUNTER + 1 ))
+		
+		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
+		
+		read -rn1 CONTINUE
+		
+		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+
+		[ ! $CONTINUE = $'\n' ] && printf "\n"
+		
+		gcc -shared -fPIC fake_malloc.c -o fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$COUNTER
+
+		if [[ $? != 0 ]]
+		then
+			continue
+		fi
+		
+		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
+		
+		printf "$REDB$GCC_CMD$DEF\n"
+		
+		sh -c "$GCC_CMD 2>&1" 
+
+		if [[ $? != 0 ]]
+		then
+			continue
+		fi
+
+		printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+		
+		sh -c "DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug $OUT_ARGS 2>&1"
+
+	done
+
+	rm "$PROJECT_PATH/fake_malloc.c"
+
+	rm "./fake_malloc_destructor.c"
+
+	rm "./fake_malloc.dylib"
 }
 
 function run()
@@ -86,6 +145,33 @@ function run()
 	sh -c "./malloc_debug $OUT_ARGS 2>&1"
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+}
+
+function run_osx()
+{
+	gcc -shared -fPIC fake_malloc.c -o fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
+
+	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
+	
+	printf "$REDB$GCC_CMD$DEF\n"
+	
+	sh -c "$GCC_CMD 2>&1" 
+
+	if [[ $? != 0 ]]
+	then
+		rm "$PROJECT_PATH/fake_malloc.c"
+		exit 1
+	fi
+
+	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	
+	sh -c "DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug $OUT_ARGS 2>&1"
+
+	rm "$PROJECT_PATH/fake_malloc.c"
+
+	rm "./fake_malloc_destructor.c"
+
+	rm "./fake_malloc.dylib"
 }
 
 function add_to_path()
@@ -156,14 +242,14 @@ do
 			while [[ $I -le $ARGS_LEN ]]
 			do
 				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
-				[ ! -e "${ARGS[$I]}" ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
+				[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
 				FILE_PATH+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 			PROJECT_PATH='.'
 		;;
         "--e")
-			EXCLUDE+="! -path '*${ARGS[$I + 1]}*' "
+			EXCLUDE+="! -path '${ARGS[$I + 1]}' "
         ;;
 
 		"--filter")
@@ -235,6 +321,18 @@ done
 
 [ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ] && echo "Error: $PROJECT_PATH is not a folder\n" && exit 1
 
+if [[ $OSTYPE == "darwin"* ]]
+then
+	AS_COMM="//"
+	AS_FUNC="fake_"
+	AS_OG=""
+	echo "extern void __attribute__((destructor)) malloc_hook_report();" > fake_malloc_destructor.c
+	SRC+="./fake_malloc_destructor.c "
+elif [ ! -z $FILE_PATH ]
+then
+	SRC+="$PROJECT_PATH/fake_malloc.c "
+fi
+
 eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -242,12 +340,6 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-#ifdef __APPLE__
-# define MAC_OS_SYSTEM 1
-#else
-# define MAC_OS_SYSTEM 0
-#endif
 
 #define RED \"\e[31m\"
 
@@ -261,8 +353,17 @@ typedef struct s_addr {
 	int		bytes;
 }	t_addr;
 
-static void		(*og_free)(void *);
-static void		*(*og_malloc)(size_t);
+#ifdef __APPLE__
+# define MAC_OS_SYSTEM 1
+#define DYLD_INTERPOSE(_replacment,_replacee) \
+   __attribute__((used)) static struct{ const void* replacment; const void* replacee; } _interpose_##_replacee \
+            __attribute__ ((section (\"__DATA,__interpose\"))) = { (const void*)(unsigned long)&_replacment, (const void*)(unsigned long)&_replacee };
+#else
+# define MAC_OS_SYSTEM 0
+#endif
+
+${AS_COMM}static void		(*og_free)(void *);
+${AS_COMM}static void		*(*og_malloc)(size_t);
 static int 		free_count = 0;
 static int		init_run = 0;
 static int 		zero_free_count = 0;
@@ -286,22 +387,25 @@ void malloc_hook_report()
 	{
 		if (addresses[i].address)
 		{
-			printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
-			og_free(addresses[i].function);
+			if (*(unsigned char *)addresses[i].address >= 0 && *(unsigned char *)addresses[i].address <= 128)
+				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
+			else				
+				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
+			${AS_OG}free(addresses[i].function);
 		}
 	}
 	printf(REDB \"Total leaks: %d\n\" DEF, tot_leaks);
 }
 
-int init_malloc_hook()
-{
-	og_malloc = dlsym(RTLD_NEXT, \"malloc\");
-    og_free = dlsym(RTLD_NEXT, \"free\");
+${AS_COMM}int init_malloc_hook()
+${AS_COMM}{
+${AS_COMM}	og_malloc = dlsym(RTLD_NEXT, \"malloc\");
+${AS_COMM}    og_free = dlsym(RTLD_NEXT, \"free\");
 
-    if (!og_malloc || !og_free)
-        exit(1);
-	return (0);
-}
+${AS_COMM}    if (!og_malloc || !og_free)
+${AS_COMM}        exit(1);
+${AS_COMM}	return (0);
+${AS_COMM}}
 
 int	malloc_hook_backtrace_readable(char ***stack_readable)
 {
@@ -340,25 +444,25 @@ void	malloc_hook_string_edit(char *str)
 	*start = 0;
 }
 
-void	*malloc(size_t size)
+void	*${AS_FUNC}malloc(size_t size)
 {
 	void		*ret;
 	char		**stack;
 	int			stack_size;
 	static int	malloc_fail = 0;
 
-	if (!og_malloc)
-		if (init_malloc_hook())
-			exit (1);
+	${AS_COMM}if (!og_malloc)
+	${AS_COMM}	if (init_malloc_hook())
+	${AS_COMM}		exit (1);
 	if (init_run)
-		return (og_malloc(size));
+		return (${AS_OG}malloc(size));
 	init_run = 1;
 	stack_size = malloc_hook_backtrace_readable(&stack);
-	if (!MAC_OS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
+	if (ONLY_SOURCE && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
 	{
-		og_free(stack);
+		${AS_OG}free(stack);
 		init_run = 0;
-		return (og_malloc(size));
+		return (${AS_OG}malloc(size));
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
@@ -367,12 +471,12 @@ void	*malloc(size_t size)
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
 			printf(REDB \"(MALLOC_FAIL)\" DEF \" %s - %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
-			og_free(stack);
+			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
 		}
 		malloc_count++;
-		ret = og_malloc(size);
+		ret = ${AS_OG}malloc(size);
 		addr_i++;
 		if (addr_i == ADDR_ARR_SIZE)
 		{
@@ -384,7 +488,7 @@ void	*malloc(size_t size)
 		if (addr_i == ADDR_ARR_SIZE - 1)
 		{
 			printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
-			og_free(stack);
+			${AS_OG}free(stack);
 			exit (1);
 		}
 		addresses[addr_i].function = strdup(stack[2]);
@@ -393,28 +497,26 @@ void	*malloc(size_t size)
 		printf(REDB \"(MALLOC_WRAPPER)\" DEF \" %s - %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
 	}
 	else
-		ret = og_malloc(size);
+		ret = ${AS_OG}malloc(size);
 	init_run = 0;
-	og_free(stack);
+	${AS_OG}free(stack);
 	return (ret);
 }
 
-void	free(void *tofree)
+void	${AS_FUNC}free(void *tofree)
 {
 	char	**stack;
 
-	if (!og_free)
-		exit(1);
 	if (init_run)
 	{
-		og_free(tofree);
+		${AS_OG}free(tofree);
 		return ;
 	}
 	init_run = 1;
 	malloc_hook_backtrace_readable(&stack);
-	if (!MAC_OS_SYSTEM && ONLY_SOURCE && stack[2][0] != '.')
+	if (ONLY_SOURCE && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
 	{
-		og_free(stack);
+		${AS_OG}free(stack);
 		init_run = 0;
 		return ;
 	}
@@ -430,7 +532,7 @@ void	free(void *tofree)
 			{
 				if (addresses[i].address == tofree)
 				{
-					og_free(addresses[i].function);
+					${AS_OG}free(addresses[i].function);
 					addresses[i].function = 0;
 					addresses[i].bytes = 0;
 					addresses[i].address = 0;
@@ -441,18 +543,22 @@ void	free(void *tofree)
 			zero_free_count++;
 	}
 	init_run = 0;
-	og_free(stack);
-	og_free(tofree);
+	${AS_OG}free(stack);
+	${AS_OG}free(tofree);
 }
+
+$([ -z AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_malloc, malloc);
+$([ -z AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_free, free);
 
 EOF"
 
-[ -z $FILE_PATH ] && SRC=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ') || SRC="$PROJECT_PATH/fake_malloc.c$FILE_PATH"
+[ -z $FILE_PATH ] && SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ') || SRC+="$FILE_PATH"
 
 if [ -z $MALLOC_FAIL_LOOP ]
 then
-	run
+	[[ $OSTYPE == "darwin"* ]] && run_osx || run
 else
-	loop
+	[[ $OSTYPE == "darwin"* ]] && loop_osx || loop
 fi
+
 exit 0
