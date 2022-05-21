@@ -100,8 +100,6 @@ You can use this executable for compiling single files, multiple files or entire
 
 ## Understanding the output:
 
-The output will contain malloc calls coming from the source file, which means it will not contain the calls from library functions, for example if you use *strdup()* the malloc call done by *strdup()* will not be shown. This can be bypassed on Linux by including the `--include-ext` flag
-
 ### Reference:
 
  - `(MALLOC_WRAPPER)`:
