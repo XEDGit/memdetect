@@ -43,15 +43,18 @@ mall_wrapper:
 
 To attach this program to your files, you will have to specify your source files with `-d` or `-f` flag, if the compiling needs additional flags use `-fl` or if your program needs arguments to execute use `-a`
 
-### Flags:
+### Usage:
+    ./malloc_wrapper.sh {-d <directory_path>| -f <file_path>} (optional flags)
 
- - #### Mandatory (choose only one):
+## Flags:
+
+ - ### Mandatory (choose only one):
 
    * `-d` `-dir` `--directory directory_path`: Specify the path of your project directory
 
    * `-f` `--files file_path0 file_path1...`: Specify one or more files to compile with the wrapper
    
- - #### Optional:
+ - ### Optional:
 
    - `-fl` `--flags flag0 flag1...`: Specify flags to use when compiling with gcc
    
@@ -71,7 +74,7 @@ To attach this program to your files, you will have to specify your source files
   
    - `-h` `--help`: Display help message
 
- - ##### --fail (Use only one):
+ - #### --fail (Use only one):
 
    - `-fail number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
