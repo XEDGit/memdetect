@@ -72,7 +72,7 @@ function loop()
 		
 		printf "$REDB$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 		
-		sh -c "$PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
+		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	done
 
@@ -125,7 +125,7 @@ function loop_osx()
 
 		printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 		
-		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
+		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	done
 
@@ -155,7 +155,7 @@ function run()
 
 	printf "$RED$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 	
-	sh -c "$PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
+	sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	rm -f "$PROJECT_PATH/fake_malloc.c"
 
@@ -190,7 +190,7 @@ function run_osx()
 
 	printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 	
-	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
+	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	rm -f "$PROJECT_PATH/fake_malloc.c"
 	
@@ -330,7 +330,7 @@ do
 			while [[ $I -le $ARGS_LEN ]]
 			do
 				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
-				OUT_ARGS+=("${ARGS[$I]}")
+				OUT_ARGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
