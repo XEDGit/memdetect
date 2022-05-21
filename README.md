@@ -1,6 +1,6 @@
 # malloc_wrapper
 <img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
-This is a shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debugging better!
+A shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debugging better!
 
 ## Info:
 
@@ -39,9 +39,9 @@ mall_wrapper:
     /path/to/malloc_wrapper.sh --d /path/to/project # --flags $(YOUR_FLAGS) $(YOUR_LIBS) $(YOUR_HEADERS)'
 ```
 
-## Usage:
+## Run:
 
-You can use this executable for compiling single files, multiple files or entire projects.
+To attach this program to your files, you will have to specify your source files with `--d` or `--f` flag, if the compiling needs additional flags use `--flags` or if your program needs arguments to execute use `--a`
 
 ### Flags:
 
@@ -49,19 +49,19 @@ You can use this executable for compiling single files, multiple files or entire
 
    * `--d directory_path`: Specify the path of your project directory
 
-   * `--f file_path0 file_path...`: Specify one or more files to compile with the wrapper
+   * `--f file_path0 file_path1...`: Specify one or more files to compile with the wrapper
    
  - #### Optional:
 
-   - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
+   - `--flags flag0 flag1...`: Specify flags to use when compiling with gcc
+   
+   - `--a arg0 arg1...`: Specify arguments to run with the executable
 
-   - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
+   - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
 
    - `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
    - `--preserve`: Adding this flag will mantain the executable output files
-   
-   - `--a arg0 arg...`: Specify arguments to run with the executable
 
    - `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
    
