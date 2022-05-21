@@ -4,7 +4,8 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
-FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-fi" "--filter" "-lb" "-leaks-buff" "-p" "-preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
+FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" \
+	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "-preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
 
 RED="\e[31m"
 
@@ -37,7 +38,7 @@ AS_OG="og_"
 SRC=""
 
 
-HELP_MSG="Usage: ./malloc_wrapper project_path --f filename || --d directory_path [[--h] [--fail malloc_to_fail_index] [--e folder_to_exclude_name] [--flags flag0 [flag...]] [--a arg0 [arg...]] ]\n"
+HELP_MSG="Usage: ./malloc_wrapper {-f <file0> [<file1>...] | -d <directory_path>} [[-h] | [--add-path] | [-nr] [-ie] [-lb] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-fi <filter>] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
 
 I=0
 
@@ -53,7 +54,7 @@ function loop()
 		
 		(( COUNTER = COUNTER + 1 ))
 		
-		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
+		printf "\e[1mPress any key to run with -fail $COUNTER or 'q' to quit: $DEF"
 		
 		read -rn1 CONTINUE
 		
