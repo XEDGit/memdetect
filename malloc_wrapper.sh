@@ -299,7 +299,7 @@ do
 				then
 					MALLOC_FAIL_INDEX=-1
 				else
-					printf "Error: the value of --fail '$arg' is not a number, 'all' or 'loop'."
+					printf "Error: the value of --fail '$arg' is not a number, 'all' or 'loop'\n"
 					exit 1
 				fi
 			else
@@ -328,7 +328,8 @@ do
 		;;
 
 		"--leaks-buff")
-			! [[ $NEW_VAL =~ $RE ]] && printf "Error: the value of --leaks-buff '$arg' is not a number" && exit 1
+			NEW_VAL=${ARGS[$I + 1]}
+			! [[ $NEW_VAL =~ $RE ]] && printf "Error: the value of --leaks-buff '$arg' is not a number\n" && exit 1
 			ADDR_SIZE=$NEW_VAL
 		;;
 
