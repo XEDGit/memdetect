@@ -4,6 +4,8 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
+FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-fi" "--filter" "-lb" "-leaks-buff" "-p" "-preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
+
 RED="\e[31m"
 
 REDB="\e[1;31m"
@@ -241,10 +243,19 @@ function add_to_path()
 
 }
 
+function check_flag()
+{
+	for FL in ${FLAGS[@]}
+	do
+		[ "$1" = $FL ] && return 0
+	done
+	return 1
+}
+
 printf "$REDB============== malloc_wrapper by: ===============
  __    __ ________ _______   ______  __   __     
 |  \\  |  |        |       \\ /      \\|  \\ |  \\    
-| \$\$  | \$| \$\$\$\$\$\$\$| \$\$\$\$\$\$\$|   \$\$\$\$\$\$\\\\\$\$_| \$\$_   
+| \$\$  | \$| \$\$\$\$\$\$\$| \$\$\$\$\$\$\$| \$\$\$\$\$\$ | \$\$_| \$\$_   
  \\\$\$\\/  \$| \$\$__   | \$\$  | \$| \$\$ __\\\$|  |   \$\$ \\  
   >\$\$  \$\$| \$\$  \\  | \$\$  | \$| \$\$|    | \$\$\\\$\$\$\$\$\$  
  /  \$\$\$\$\\| \$\$\$\$\$  | \$\$  | \$| \$\$ \\\$\$\$| \$\$ | \$\$ __ 
@@ -259,45 +270,49 @@ do
     arg=${ARGS[$I]}
 	case $arg in
 
-		"--d")
+		"-d" | "-dir" | "--directory")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
 			PROJECT_PATH=${ARGS[$I + 1]%/}
 		;;
 		
-		"--f")
+		"-f" | "--files")
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
+				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
 				FILE_PATH+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 			PROJECT_PATH='.'
 		;;
-        "--e")
+        "-e" | "--exclude")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
 			EXCLUDE_FIND+="! -path '*${ARGS[$I + 1]}*' "
         ;;
 
-		"--filter")
+		"-fi" | "--filter")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
 			EXCLUDE_RES="${ARGS[$I + 1]}"
 		;;
 
-		"--include-ext")
+		"-ie" | "--include-ext")
 			ONLY_SOURCE=0
 		;;
 
-		"--preserve")
+		"-p" | "--preserve")
 			PRESERVE=1
 		;;
 
-		"--fail")
+		"-fail")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
 				if [ "$NEW_VAL" = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
-					if [ ! -z ${ARGS[$I + 2]} ] && [[ ! ${ARGS[$I + 2]} = "--"* ]] && [[ ${ARGS[$I + 2]} =~ $RE ]]
+					if [ ! -z ${ARGS[$I + 2]} ] && check_flag ${ARGS[$I + 2]} && [[ ${ARGS[$I + 2]} =~ $RE ]]
 					then
 						COUNTER=${ARGS[$I + 2]}
 					else
@@ -315,36 +330,40 @@ do
 			fi
 		;;
 
-        "--flags")
+        "-fl" | "--flags")
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
+				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				GCC_FLAGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
 
-		"--a")
+		"-a" | "--args")
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
-				[[ ${ARGS[$I]} = "--"* ]] && (( I = I - 1 )) && break
+				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				OUT_ARGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
 
-		"--leaks-buff")
+		"-lb" | "--leaks-buff")
 			NEW_VAL=${ARGS[$I + 1]}
-			! [[ $NEW_VAL =~ $RE ]] && printf "Error: the value of --leaks-buff '$arg' is not a number\n" && exit 1
+			(! [[ $NEW_VAL =~ $RE ]] || check_flag $NEW_VAL) && printf "Error: the value of --leaks-buff '$NEW_VAL' is not a number\n" && exit 1
 			ADDR_SIZE=$NEW_VAL
 		;;
 
-        "--h")
+        "-h" | "--help")
 			printf "$HELP_MSG"
             exit
         ;;
+
+		"-nr" | "--no-report")
+			NO_REPORT="// "
+		;;
 
 		"--add-path")
 			add_to_path
@@ -354,18 +373,18 @@ do
     (( I = I + 1 ))
 done
 
-[ -z $FILE_PATH ] && [ -z $PROJECT_PATH ]  && printf "Error: Missing --d or --f option.\n$HELP_MSG" && exit 1
+([ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]) && printf "Error: Missing --d or --f option.\n$HELP_MSG" && exit 1
 
-[ -z $FILE_PATH ] && [ ! -d $PROJECT_PATH ] && echo "Error: $PROJECT_PATH is not a folder\n" && exit 1
+([ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]) && echo "Error: $PROJECT_PATH is not a folder\n" && exit 1
 
-if [[ $OSTYPE == "darwin"* ]]
+if [[ "$OSTYPE" == "darwin"* ]]
 then
 	AS_COMM="//"
 	AS_FUNC="fake_"
 	AS_OG=""
 	echo "extern void __attribute__((destructor)) malloc_hook_report();" > $PROJECT_PATH/fake_malloc_destructor.c
-	[ ! -z $FILE_PATH ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
-elif [ ! -z $FILE_PATH ]
+	[ ! -z "$FILE_PATH" ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
+elif [ ! -z "$FILE_PATH" ]
 then
 	SRC+="$PROJECT_PATH/fake_malloc.c "
 fi
@@ -409,7 +428,7 @@ static int		addr_i = 0;
 static int		addr_rep = 0;
 static t_addr	addresses[ADDR_ARR_SIZE] = {0};
 
-void __attribute__((destructor)) malloc_hook_report();
+${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
 
 int	malloc_hook_check_content(unsigned char *str)
 {
@@ -598,9 +617,9 @@ $([ -z "$AS_COMM" ] && echo "// ")DYLD_INTERPOSE(fake_free, free);
 
 EOF"
 
-if [ -z $FILE_PATH ]
+if [ -z "$FILE_PATH" ]
 then
-	if [[ $OSTYPE == "darwin"* ]]
+	if [[ "$OSTYPE" == "darwin"* ]]
 	then
 		SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
 	else
@@ -610,11 +629,11 @@ else
 	SRC+="$FILE_PATH"
 fi
 
-if [ -z $MALLOC_FAIL_LOOP ]
+if [ -z "$MALLOC_FAIL_LOOP" ]
 then
-	[[ $OSTYPE == "darwin"* ]] && run_osx || run
+	[[ "$OSTYPE" == "darwin"* ]] && run_osx || run
 else
-	[[ $OSTYPE == "darwin"* ]] && loop_osx || loop
+	[[ "$OSTYPE" == "darwin"* ]] && loop_osx || loop
 fi
 
 exit 0
