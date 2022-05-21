@@ -12,6 +12,8 @@ DEF="\e[0m"
 
 RE='^[0-9]+$'
 
+EXCLUDE_FIND="! -path '*malloc_wrapper*' "
+
 GCC_FLAGS=""
 
 OUT_ARGS=""
@@ -56,7 +58,7 @@ function loop()
 
 		[ ! $CONTINUE = $'\n' ] && printf "\n"
 		
-		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
+		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS"
 		
 		printf "$REDB$GCC_CMD$DEF\n"
 		
@@ -67,13 +69,16 @@ function loop()
 			continue
 		fi
 		
-		printf "$REDB./malloc_debug$OUT_ARGS:$DEF\n"
+		printf "$REDB$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 		
-		sh -c "$FAKE_MALLOC_DYLD./malloc_debug $OUT_ARGS 2>&1"
+		sh -c "$PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
 	done
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+
+	[ -z $PRESERVE ] && rm "$PROJECT_PATH/malloc_debug"
+
 }
 
 function loop_osx()
@@ -91,18 +96,21 @@ function loop_osx()
 		
 		read -rn1 CONTINUE
 		
-		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+		if [ "$CONTINUE" == "q" ]
+		then
+			break
+		fi
 
 		[ ! $CONTINUE = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC fake_malloc.c -o fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$COUNTER
+		gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$COUNTER
 
 		if [[ $? != 0 ]]
 		then
 			continue
 		fi
 		
-		GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
+		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
 		printf "$REDB$GCC_CMD$DEF\n"
 		
@@ -113,22 +121,25 @@ function loop_osx()
 			continue
 		fi
 
-		printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+		printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 		
-		sh -c "DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug $OUT_ARGS 2>&1"
+		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
 	done
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+	
+	rm "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	rm "./fake_malloc_destructor.c"
+	[ -z $PRESERVE ] && rm "$PROJECT_PATH/fake_malloc.dylib" && rm "$PROJECT_PATH/malloc_debug"
 
-	rm "./fake_malloc.dylib"
+	printf "\nExiting\n"
+
 }
 
 function run()
 {
-	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
+	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS"
 	
 	printf "$REDB$GCC_CMD$DEF\n"
 	
@@ -140,18 +151,28 @@ function run()
 		exit 1
 	fi
 
-	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	printf "$RED$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 	
-	sh -c "./malloc_debug $OUT_ARGS 2>&1"
+	sh -c "$PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+
+	[ -z $PRESERVE ] && rm "$PROJECT_PATH/malloc_debug"
+
 }
 
 function run_osx()
 {
-	gcc -shared -fPIC fake_malloc.c -o fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
+	gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
 
-	GCC_CMD="gcc $SRC -rdynamic -o malloc_debug$GCC_FLAGS"
+	if [[ $? != 0 ]]
+	then
+		rm "$PROJECT_PATH/fake_malloc.c"
+		rm "$PROJECT_PATH/fake_malloc_destructor.c"
+		exit 1
+	fi
+
+	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
 	printf "$REDB$GCC_CMD$DEF\n"
 	
@@ -160,18 +181,21 @@ function run_osx()
 	if [[ $? != 0 ]]
 	then
 		rm "$PROJECT_PATH/fake_malloc.c"
+		rm "$PROJECT_PATH/fake_malloc_destructor.c"
+		rm "$PROJECT_PATH/fake_malloc.dylib"
 		exit 1
 	fi
 
-	printf "$RED./malloc_debug$OUT_ARGS:$DEF\n"
+	printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
 	
-	sh -c "DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug $OUT_ARGS 2>&1"
+	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
 	rm "$PROJECT_PATH/fake_malloc.c"
+	
+	rm "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	rm "./fake_malloc_destructor.c"
+	[ -z $PRESERVE ] && rm "$PROJECT_PATH/fake_malloc.dylib" && rm "$PROJECT_PATH/malloc_debug"
 
-	rm "./fake_malloc.dylib"
 }
 
 function add_to_path()
@@ -249,15 +273,19 @@ do
 			PROJECT_PATH='.'
 		;;
         "--e")
-			EXCLUDE+="! -path '${ARGS[$I + 1]}' "
+			EXCLUDE_FIND+="! -path '*${ARGS[$I + 1]}*' "
         ;;
 
 		"--filter")
-			EXCLUDE_RES=${ARGS[$I + 1]}
+			EXCLUDE_RES="${ARGS[$I + 1]}"
 		;;
 
 		"--include-ext")
 			ONLY_SOURCE=0
+		;;
+
+		"--preserve")
+			PRESERVE=1
 		;;
 
 		"--fail")
@@ -326,8 +354,8 @@ then
 	AS_COMM="//"
 	AS_FUNC="fake_"
 	AS_OG=""
-	echo "extern void __attribute__((destructor)) malloc_hook_report();" > fake_malloc_destructor.c
-	SRC+="./fake_malloc_destructor.c "
+	echo "extern void __attribute__((destructor)) malloc_hook_report();" > $PROJECT_PATH/fake_malloc_destructor.c
+	[ ! -z $FILE_PATH ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
 elif [ ! -z $FILE_PATH ]
 then
 	SRC+="$PROJECT_PATH/fake_malloc.c "
@@ -552,7 +580,17 @@ $([ -z AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_free, free);
 
 EOF"
 
-[ -z $FILE_PATH ] && SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE" | tr '\n' ' ') || SRC+="$FILE_PATH"
+if [ -z $FILE_PATH ]
+then
+	if [[ $OSTYPE == "darwin"* ]]
+	then
+		SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
+	else
+		 SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE_FIND" | tr '\n' ' ')
+	fi
+else
+	SRC+="$FILE_PATH"
+fi
 
 if [ -z $MALLOC_FAIL_LOOP ]
 then
