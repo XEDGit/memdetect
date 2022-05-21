@@ -57,7 +57,9 @@ You can use this executable for compiling single files, multiple files or entire
 
    - `--flags flag0 flag...`: Specify flags to use when compiling with gcc
 
-   - `--filter arg`: Specify a string which will filter out results from the wrapper output if `arg` is in the calling function
+   - `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
+
+   - `--preserve`: Adding this flag will mantain the executable output files
    
    - `--a arg0 arg...`: Specify arguments to run with the executable
 
@@ -71,7 +73,7 @@ You can use this executable for compiling single files, multiple files or entire
 
    - `--fail all`: Adding this flag will fail all the malloc calls
 
-   - `--fail loop`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on
+   - `--fail loop start_from`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start from there
  
  - ##### --add-path: adds malloc_wrapper to a $PATH of your choice
 
@@ -131,21 +133,6 @@ xedgit@pc:~ $ malloc_wrapper --f example.c --fail 3
 #include <stdlib.h>
 #include <string.h>
 
-char *my_strdup(char *str)
-{
-  char    *new;
-  int     c;
-  
-  new = malloc(strlen(str) + 1);
-  if (!new)
-    return (0);
-  c = 0;
-  while (*str)
-    new[c++] = *str++;
-  new[c] = 0;
-  return (new);
-}
-
 int main(void)
 {
   char *str1, *str2, *str3;
@@ -154,8 +141,8 @@ int main(void)
   str1[0] = 'e';
   str1[1] = 'x';
   str1[2] = '\0';
-  str2 = my_strdup(str1);
-  str3 = my_strdup(str2);
+  str2 = strdup(str1);
+  str3 = strdup(str2);
   free(str2);
   return (0);
 }
@@ -165,11 +152,11 @@ int main(void)
     
     (MALLOC_WRAPPER) start - main allocated 3 bytes at 0x6000010b4040
     (MALLOC_WRAPPER) main - strdup allocated 3 bytes at 0x6000010b4050
-    (MALLOC_FAIL) main - ft_strdup malloc num 3 failed
+    (MALLOC_FAIL) main - strdup malloc num 3 failed
     (FREE_WRAPPER) start - main free 0x6000010b4050
     (MALLOC_REPORT)
-       Malloc calls: 2
-       Free calls: 1
-       Free calls to 0x0: 0
+         Malloc calls: 2
+         Free calls: 1
+         Free calls to 0x0: 0
     Leaks at exit:
-    1) From main of size 3 at address 0x6000003b4040
+    1)   From main of size 3 at address 0x6000003b4040    Content: "ex"
