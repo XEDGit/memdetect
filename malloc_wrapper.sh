@@ -575,8 +575,8 @@ void	${AS_FUNC}free(void *tofree)
 	${AS_OG}free(tofree);
 }
 
-$([ -z AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_malloc, malloc);
-$([ -z AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_free, free);
+$([ -z $AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_malloc, malloc);
+$([ -z $AS_COMM ] && echo "//")DYLD_INTERPOSE(fake_free, free);
 
 EOF"
 
