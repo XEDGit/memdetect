@@ -114,7 +114,8 @@ You can use this executable for compiling single files, multiple files or entire
  - `(MALLOC_ERROR)`:
     - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` with a bigger value than default (10000) to fix this
 
-After your program exits a leak report will be printed
+After your program exits a leak report will be printed.
+**⚠️WARNING: if you use exit() all the addresses which have a reference stored in variables gets freed automatically, but the report will still include them**
 
 ### Example:
 
