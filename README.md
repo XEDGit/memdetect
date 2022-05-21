@@ -36,44 +36,48 @@ You can integrate this program with Makefile by executing this command in your M
 ```shell
 echo >> ./Makefile '
 mall_wrapper:
-    /path/to/malloc_wrapper.sh --d /path/to/project # --flags $(YOUR_FLAGS) $(YOUR_LIBS) $(YOUR_HEADERS)'
+    /path/to/malloc_wrapper.sh -d /path/to/project # -flags $(YOUR_FLAGS) $(YOUR_LIBS) $(YOUR_HEADERS)'
 ```
 
 ## Run:
 
-To attach this program to your files, you will have to specify your source files with `--d` or `--f` flag, if the compiling needs additional flags use `--flags` or if your program needs arguments to execute use `--a`
+To attach this program to your files, you will have to specify your source files with `-d` or `-f` flag, if the compiling needs additional flags use `-fl` or if your program needs arguments to execute use `-a`
 
 ### Flags:
 
  - #### Mandatory (choose only one):
 
-   * `--d directory_path`: Specify the path of your project directory
+   * `-d` `-dir` `--directory directory_path`: Specify the path of your project directory
 
-   * `--f file_path0 file_path1...`: Specify one or more files to compile with the wrapper
+   * `-f` `--files file_path0 file_path1...`: Specify one or more files to compile with the wrapper
    
  - #### Optional:
 
-   - `--flags flag0 flag1...`: Specify flags to use when compiling with gcc
+   - `-fl` `--flags flag0 flag1...`: Specify flags to use when compiling with gcc
    
-   - `--a arg0 arg1...`: Specify arguments to run with the executable
+   - `-a` `--args arg0 arg1...`: Specify arguments to run with the executable
 
-   - `--e folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
+   - `-e` `--exclude folder_to_exclude`: Specify a folder inside the `--d directory_path` which gets excluded from compiling
 
-   - `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
+   - `-fi` `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
-   - `--preserve`: Adding this flag will mantain the executable output files
+   - `-p` `--preserve`: Adding this flag will mantain the executable output files
 
-   - `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+   - `-lb` `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+
+   - `-np` `--no-report`: Doesn't display the leaks report at the program exit
    
-   - `--include-ext`: **(only for Linux)** Adding this flag will include in the output the calls to malloc and free from outside your source files
+   - `-ie` `--include-ext`: **(only for Linux)** Adding this flag will include in the output the calls to malloc and free from outside your source files
+  
+   - `-h` `--help`: Display help message
 
  - ##### --fail (Use only one):
 
-   - `--fail number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+   - `-fail number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-   - `--fail all`: Adding this flag will fail all the malloc calls
+   - `-fail all`: Adding this flag will fail all the malloc calls
 
-   - `--fail loop start_from`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start from there
+   - `-fail loop start_from`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start from there
  
  - ##### --add-path: adds malloc_wrapper to a $PATH of your choice
 
@@ -84,19 +88,19 @@ To attach this program to your files, you will have to specify your source files
 
 #### Run with single file
 
-    ./malloc_wrapper.sh --f ft_split.c
+    ./malloc_wrapper.sh -f ft_split.c
    
 #### Run with multiple files
 
-    ./malloc_wrapper.sh --f ft_split.c ft_strlen.c
+    ./malloc_wrapper.sh --files ft_split.c ft_strlen.c
 
 #### Run with project folder
 
-    ./malloc_wrapper.sh --d minitalk
+    ./malloc_wrapper.sh -d minitalk
 
 #### Run with options
 
-    ./malloc_wrapper.sh --d .. --fail loop --filter rl_ --flags -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include --e examples 
+    ./malloc_wrapper.sh -dir .. -fail loop --filter rl_ --flags -Iincludes -lreadline -L/Users/XEDGit/.brew/opt/readline/lib -I/Users/XEDGit/.brew/opt/readline/include -e examples 
 
 ## Understanding the output:
 
@@ -109,7 +113,7 @@ To attach this program to your files, you will have to specify your source files
     - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
 
  - `(MALLOC_FAIL)`:
-    - when a malloc call gets failed by the `--fail` flag it will be printed on the stdout with the last two functions in the stack
+    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the last two functions in the stack
 
  - `(MALLOC_ERROR)`:
     - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` with a bigger value than default (10000) to fix this
@@ -123,7 +127,7 @@ After your program exits a leak report will be printed.
 
 ```console
 # With malloc_wrapper in $PATH
-xedgit@pc:~ $ malloc_wrapper --f example.c --fail 3
+xedgit@pc:~ $ malloc_wrapper -f example.c -fail 3
 ```
 
 ```c
