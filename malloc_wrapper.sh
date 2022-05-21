@@ -41,7 +41,8 @@ I=0
 
 function loop()
 {
-	COUNTER=0
+	
+	(( COUNTER = COUNTER - 1 ))
 	
 	CONTINUE=""
 	
@@ -54,7 +55,7 @@ function loop()
 		
 		read -rn1 CONTINUE
 		
-		[ "$CONTINUE" == "q" ] && rm "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+		[ "$CONTINUE" == "q" ] && rm -f "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
 
 		[ ! $CONTINUE = $'\n' ] && printf "\n"
 		
@@ -75,16 +76,17 @@ function loop()
 
 	done
 
-	rm "$PROJECT_PATH/fake_malloc.c"
+	rm -f "$PROJECT_PATH/fake_malloc.c"
 
-	[ -z $PRESERVE ] && rm "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
 function loop_osx()
 {
-	COUNTER=0
 	
+	(( COUNTER = COUNTER - 1 ))
+
 	CONTINUE=""
 	
 	while [[ $COUNTER -ge 0 ]]
@@ -127,11 +129,11 @@ function loop_osx()
 
 	done
 
-	rm "$PROJECT_PATH/fake_malloc.c"
+	rm -f "$PROJECT_PATH/fake_malloc.c"
 	
-	rm "$PROJECT_PATH/fake_malloc_destructor.c"
+	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm "$PROJECT_PATH/fake_malloc.dylib" && rm "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib" && rm -f "$PROJECT_PATH/malloc_debug"
 
 	printf "\nExiting\n"
 
@@ -147,7 +149,7 @@ function run()
 
 	if [[ $? != 0 ]]
 	then
-		rm "$PROJECT_PATH/fake_malloc.c"
+		rm -f "$PROJECT_PATH/fake_malloc.c"
 		exit 1
 	fi
 
@@ -155,9 +157,9 @@ function run()
 	
 	sh -c "$PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
-	rm "$PROJECT_PATH/fake_malloc.c"
+	rm -f "$PROJECT_PATH/fake_malloc.c"
 
-	[ -z $PRESERVE ] && rm "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
@@ -167,8 +169,8 @@ function run_osx()
 
 	if [[ $? != 0 ]]
 	then
-		rm "$PROJECT_PATH/fake_malloc.c"
-		rm "$PROJECT_PATH/fake_malloc_destructor.c"
+		rm -f "$PROJECT_PATH/fake_malloc.c"
+		rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 		exit 1
 	fi
 
@@ -180,9 +182,9 @@ function run_osx()
 
 	if [[ $? != 0 ]]
 	then
-		rm "$PROJECT_PATH/fake_malloc.c"
-		rm "$PROJECT_PATH/fake_malloc_destructor.c"
-		rm "$PROJECT_PATH/fake_malloc.dylib"
+		rm -f "$PROJECT_PATH/fake_malloc.c"
+		rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
+		rm -f "$PROJECT_PATH/fake_malloc.dylib"
 		exit 1
 	fi
 
@@ -190,11 +192,11 @@ function run_osx()
 	
 	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug $OUT_ARGS 2>&1"
 
-	rm "$PROJECT_PATH/fake_malloc.c"
+	rm -f "$PROJECT_PATH/fake_malloc.c"
 	
-	rm "$PROJECT_PATH/fake_malloc_destructor.c"
+	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm "$PROJECT_PATH/fake_malloc.dylib" && rm "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib" && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
@@ -295,6 +297,12 @@ do
 				if [ "$NEW_VAL" = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
+					if [ ! -z ${ARGS[$I + 2]} ] && [[ ! ${ARGS[$I + 2]} = "--"* ]] && [[ ${ARGS[$I + 2]} =~ $RE ]]
+					then
+						COUNTER=${ARGS[$I + 2]}
+					else
+						COUNTER=1
+					fi
 				elif [ "$NEW_VAL" = "all" ]
 				then
 					MALLOC_FAIL_INDEX=-1
@@ -403,6 +411,15 @@ static t_addr	addresses[ADDR_ARR_SIZE] = {0};
 
 void __attribute__((destructor)) malloc_hook_report();
 
+int	malloc_hook_check_content(unsigned char *str)
+{
+	while (*str && *str >= 0 && *str <= 128)
+		str++;
+	if (!*str)
+		return (0);
+	return (1);
+}
+
 void malloc_hook_report()
 {
 	int	tot_leaks;
@@ -416,10 +433,10 @@ void malloc_hook_report()
 	{
 		if (addresses[i].address)
 		{
-			if (*(unsigned char *)addresses[i].address >= 0 && *(unsigned char *)addresses[i].address <= 128)
+			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
 				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
 			else				
-				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
+				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
 		}
 	}
