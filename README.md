@@ -133,11 +133,6 @@ if you use exit() all the addresses which have a reference stored in the stack g
 
 #### Input:
 
-```console
-# With malloc_wrapper in $PATH
-xedgit@pc:~ $ malloc_wrapper example.c -fail 3
-```
-
 ```c
 // example.c:
 
@@ -160,7 +155,12 @@ int main(void)
 ```
 
 #### Output:
-    
+
+```console
+# With malloc_wrapper in $PATH
+xedgit@pc:~ $ malloc_wrapper example.c -fail 3
+```
+
     DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:
     (MALLOC_WRAPPER) libdyld.dylib / start -> main allocated 3 bytes at 0x7fa643c03590
     (MALLOC_WRAPPER) malloc_debug / main -> strdup allocated 3 bytes at 0x7fa643c03850
