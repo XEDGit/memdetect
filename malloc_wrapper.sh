@@ -1,13 +1,19 @@
 #!/bin/bash
 
-printf "$REDB================= malloc_wrapper by: ==================
+RED="\e[31m"
+
+REDB="\e[1;31m"
+
+DEF="\e[0m"
+
+printf "${REDB}================= malloc_wrapper by: ==================
  _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
    _|  _|    _|        _|    _|  _|            _|_|_|_|  
      _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
    _|  _|    _|        _|    _|  _|    _|  _|    _|      
  _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|      _|_|
 =======================================================
- $DEF"
+$DEF"
 
 ARGS=("$@")
 
@@ -15,12 +21,6 @@ ARGS_LEN=${#ARGS[@]}
 
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" \
 	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
-
-RED="\e[31m"
-
-REDB="\e[1;31m"
-
-DEF="\e[0m"
 
 RE='^[0-9]+$'
 
