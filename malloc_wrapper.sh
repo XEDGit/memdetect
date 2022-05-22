@@ -46,7 +46,7 @@ AS_FUNC=""
 
 AS_OG="og_"
 
-INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\")&& !strstr(stack[2], \"xrealloc\") && !strstr(stack[1], \"xrealloc\")"
+INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") && !strstr(stack[2], \"xrealloc\") && !strstr(stack[1], \"xrealloc\")"
 
 SRC=""
 
@@ -272,7 +272,7 @@ then
 		PROJECT_PATH=${ARGS[$I]%/}
 		((I = I + 1))
 	else
-		while [[ $I -le $ARGS_LEN ]]
+		while [[ $I -lt $ARGS_LEN ]]
 		do
 			check_flag ${ARGS[$I]} && break
 			[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
@@ -285,7 +285,7 @@ fi
 
 if ! check_flag ${ARGS[$I]}
 then
-	while [[ $I -le $ARGS_LEN ]]
+	while [[ $I -lt $ARGS_LEN ]]
 	do
 		check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 		GCC_FLAGS+=" ${ARGS[$I]}"
@@ -294,7 +294,7 @@ then
 	(( I = I + 1 ))
 fi
 
-while [[ $I -le $ARGS_LEN ]]
+while [[ $I -lt $ARGS_LEN ]]
 do
     arg=${ARGS[$I]}
 	case $arg in
@@ -302,7 +302,7 @@ do
         "-e" | "--exclude")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
-			while [[ $I -le $ARGS_LEN ]]
+			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				EXCLUDE_FIND+="! -path '*${ARGS[$I]}*' "
@@ -313,10 +313,10 @@ do
 		"-fi" | "--filter")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
-			while [[ $I -le $ARGS_LEN ]]
+			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
-				EXCLUDE_RES+=" ${ARGS[$I]}"
+				EXCLUDE_RES+=" && !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
 				(( I = I + 1 ))
 			done
 		;;
@@ -362,7 +362,7 @@ do
         "-fl" | "--flags")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
-			while [[ $I -le $ARGS_LEN ]]
+			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				GCC_FLAGS+=" ${ARGS[$I]}"
@@ -373,7 +373,7 @@ do
 		"-a" | "--args")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
-			while [[ $I -le $ARGS_LEN ]]
+			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
 				OUT_ARGS+=" ${ARGS[$I]}"
