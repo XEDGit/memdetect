@@ -71,7 +71,7 @@ mall_wrapper:
 
    - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc
 
-   - `-np` `--no-report`: Doesn't display the leaks report at the program exit
+   - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
    - `-fi` `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
