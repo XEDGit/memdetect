@@ -127,7 +127,7 @@ mall_wrapper:
 After your program exits a leak report will be printed. 
 
 **⚠️WARNING:  
-if you use exit() all the addresses which have a reference stored in variables gets freed automatically, but the report will still include them**
+if you use exit() all the addresses which have a reference stored in the stack gets freed automatically, but the report will still include them**
 
 ### Example:
 
@@ -161,13 +161,15 @@ int main(void)
 
 #### Output:
     
-    (MALLOC_WRAPPER) start - main allocated 3 bytes at 0x6000010b4040
-    (MALLOC_WRAPPER) main - strdup allocated 3 bytes at 0x6000010b4050
-    (MALLOC_FAIL) main - strdup malloc num 3 failed
-    (FREE_WRAPPER) start - main free 0x6000010b4050
+    DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:
+    (MALLOC_WRAPPER) libdyld.dylib / start -> main allocated 3 bytes at 0x7fa643c03590
+    (MALLOC_WRAPPER) malloc_debug / main -> strdup allocated 3 bytes at 0x7fa643c03850
+    (MALLOC_FAIL)    malloc_debug / main -> strdup malloc num 3 failed
+    (FREE_WRAPPER)   libdyld.dylib / start -> main free 0x7fa643c03850
     (MALLOC_REPORT)
-         Malloc calls: 2
-         Free calls: 1
-         Free calls to 0x0: 0
+            Malloc calls: 2
+            Free calls: 1
+            Free calls to 0x0: 0
     Leaks at exit:
-    1)   From main of size 3 at address 0x6000003b4040    Content: "ex"
+    1)      From main of size 3 at address 0x7fa643c03590   Content: "ex"
+    Total leaks: 1
