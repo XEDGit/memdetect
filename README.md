@@ -73,7 +73,7 @@ mall_wrapper:
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
-   - `-fi` `--filter arg`: Filter out results from the wrapper output if substring `arg` is found inside the output line
+   - `-fi` `--filter arg0 arg1...`: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
  - #### Output files:
 

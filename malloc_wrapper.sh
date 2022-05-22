@@ -562,7 +562,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && $EXCLUDE_RES $INCL_XMALL)
+	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
