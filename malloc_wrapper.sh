@@ -6,7 +6,7 @@ REDB="\e[1;31m"
 
 DEF="\e[0m"
 
-printf "${REDB}================= malloc_wrapper by: ==================
+printf "$REDB================= malloc_wrapper by: ==================
  _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
    _|  _|    _|        _|    _|  _|            _|_|_|_|  
      _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
@@ -20,7 +20,7 @@ ARGS=("$@")
 ARGS_LEN=${#ARGS[@]}
 
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" \
-	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
+	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
 
 RE='^[0-9]+$'
 
@@ -64,17 +64,17 @@ function loop()
 		
 		(( COUNTER = COUNTER + 1 ))
 		
-		printf "\e[1mPress any key to run with -fail $COUNTER or 'q' to quit: $DEF"
+		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
 		
 		read -rn1 CONTINUE
 		
 		[ "$CONTINUE" == "q" ] && rm -f "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
 
-		[ ! $CONTINUE = $'\n' ] && printf "\n"
+		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
 		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
 		
-		printf "$REDB$GCC_CMD$DEF\n"
+		printf "$REDB%s$DEF\n" "$GCC_CMD"
 		
 		sh -c "$GCC_CMD 2>&1"
 
@@ -83,7 +83,7 @@ function loop()
 			continue
 		fi
 		
-		printf "$REDB$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
+		echo "$REDB$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF"
 		
 		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -91,7 +91,7 @@ function loop()
 
 	rm -f "$PROJECT_PATH/fake_malloc.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
@@ -107,7 +107,7 @@ function loop_osx()
 		
 		(( COUNTER = COUNTER + 1 ))
 		
-		printf "\e[1mPress any key to run with --fail $COUNTER or 'q' to quit: $DEF"
+		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
 		
 		read -rn1 CONTINUE
 		
@@ -116,9 +116,9 @@ function loop_osx()
 			break
 		fi
 
-		[ ! $CONTINUE = $'\n' ] && printf "\n"
+		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
+		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
 
 		if [[ $? != 0 ]]
 		then
@@ -127,7 +127,7 @@ function loop_osx()
 		
 		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
-		printf "$REDB$GCC_CMD$DEF\n"
+		printf "$REDB%s$DEF\n" "$GCC_CMD"
 		
 		sh -c "$GCC_CMD 2>&1" 
 
@@ -136,7 +136,7 @@ function loop_osx()
 			continue
 		fi
 
-		printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
+		echo "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF"
 		
 		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -146,9 +146,9 @@ function loop_osx()
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 	printf "\nExiting\n"
 
@@ -158,7 +158,7 @@ function run()
 {
 	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 	
-	printf "$REDB$GCC_CMD$DEF\n"
+	printf "$REDB%s$DEF\n" "$GCC_CMD"
 	
 	sh -c "$GCC_CMD 2>&1" 
 
@@ -168,19 +168,19 @@ function run()
 		exit 1
 	fi
 
-	printf "$RED$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
+	printf "${RED}%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	rm -f "$PROJECT_PATH/fake_malloc.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
 function run_osx()
 {
-	gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
+	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
 
 	if [[ $? != 0 ]]
 	then
@@ -191,7 +191,7 @@ function run_osx()
 
 	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
-	printf "$REDB$GCC_CMD$DEF\n"
+	printf "$REDB%s$DEF\n" "$GCC_CMD"
 	
 	sh -c "$GCC_CMD 2>&1" 
 
@@ -202,7 +202,7 @@ function run_osx()
 		exit 1
 	fi
 
-	printf "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF\n"
+	printf "${RED}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -210,16 +210,16 @@ function run_osx()
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
 function add_to_path()
 {
 
-	PATH_ARR=$(echo $PATH | tr ':' '\n')
+	PATH_ARR=$(echo "$PATH" | tr ':' '\n')
 
 	CONT=0
 
@@ -235,11 +235,11 @@ function add_to_path()
 
 	printf "Select index: "
 
-	read -n${#CONT} PATH_CHOICE
+	read -rn${#CONT} PATH_CHOICE
 
 	printf "\n"
 
-	([[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $(($CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]) && echo "Index not in range" && exit 1
+	{ [[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $((CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]; } && echo "Index not in range" && exit 1
 
 	for VAL in $PATH_ARR
 	do
@@ -249,9 +249,14 @@ function add_to_path()
 
 	[ ! -e "./malloc_wrapper.sh" ] && printf "Error: ./malloc_wrapper.sh not found\n" && exit 1
 
-	[ ! -e $PATH_CHOICE ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
+	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
 
-	[ -w $PATH_CHOICE ] && cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper || sudo cp ./malloc_wrapper.sh ${PATH_CHOICE%/}/malloc_wrapper
+	if [ -w "$PATH_CHOICE" ]
+	then
+		cp ./malloc_wrapper.sh "${PATH_CHOICE%/}"/malloc_wrapper
+	else
+		sudo cp ./malloc_wrapper.sh "${PATH_CHOICE%/}"/malloc_wrapper
+	fi
 
 	printf "Done!\n"
 
@@ -259,18 +264,20 @@ function add_to_path()
 
 function check_flag()
 {
-	for FL in ${FLAGS[@]}
+	for FL in "${FLAGS[@]}"
 	do
-		[ "$1" = $FL ] && return 0
+		[ "$1" = "$FL" ] && return 0
 	done
 	return 1
 }
 
 I=0
 
-if ! check_flag ${ARGS[$I]}
+[[ $ARGS_LEN == 0 ]] && echo "$HELP_MSG" && exit 1
+
+if ! check_flag "${ARGS[$I]}"
 then
-	if [ -d ${ARGS[$I]} ]
+	if [ -d "${ARGS[$I]}" ]
 	then
 		PROJECT_PATH=${ARGS[$I]%/}
 		((I = I + 1))
@@ -278,7 +285,7 @@ then
 		while [[ $I -lt $ARGS_LEN ]]
 		do
 			[[ ${ARGS[$I]} == "-"* ]] && break
-			[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
+			[ ! -e "${ARGS[$I]}" ] && echo "Error: ${ARGS[$I]} not found" && exit 1
 			FILE_PATH+=" ${ARGS[$I]}"
 			(( I = I + 1 ))
 		done
@@ -286,11 +293,11 @@ then
 	fi
 fi
 
-if ! check_flag ${ARGS[$I]}
+if ! check_flag "${ARGS[$I]}"
 then
 	while [[ $I -lt $ARGS_LEN ]]
 	do
-		check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+		check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
 		GCC_FLAGS+=" ${ARGS[$I]}"
 		(( I = I + 1 ))
 	done
@@ -303,22 +310,22 @@ do
 	case $arg in
 
         "-e" | "--exclude")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
 				EXCLUDE_FIND+="! -path '*${ARGS[$I]}*' "
 				(( I = I + 1 ))
 			done
         ;;
 
 		"-fi" | "--filter")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
 				EXCLUDE_RES+=" && !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
 				(( I = I + 1 ))
 			done
@@ -337,17 +344,18 @@ do
 		;;
 
 		"-fail")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
 				if [ "$NEW_VAL" = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
-					if [ ! -z ${ARGS[$I + 2]} ] && check_flag ${ARGS[$I + 2]} && [[ ${ARGS[$I + 2]} =~ $RE ]]
+					if [ -n "${ARGS[$I + 2]}" ] && ! check_flag "${ARGS[$I + 2]}" && [[ ${ARGS[$I + 2]} =~ $RE ]]
 					then
 						COUNTER=${ARGS[$I + 2]}
 					else
+						echo "DIOPORCO"
 						COUNTER=1
 					fi
 				elif [ "$NEW_VAL" = "all" ]
@@ -363,22 +371,22 @@ do
 		;;
 
         "-fl" | "--flags")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
 				GCC_FLAGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
 
 		"-a" | "--args")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: %s flag value '%s' is a malloc_wrapper flag\n" "${ARGS[$I]}" "${ARGS[$I + 1]}" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
 				OUT_ARGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -386,12 +394,12 @@ do
 
 		"-lb" | "--leaks-buff")
 			NEW_VAL=${ARGS[$I + 1]}
-			(! [[ $NEW_VAL =~ $RE ]] || check_flag $NEW_VAL) && printf "Error: the value of --leaks-buff '$NEW_VAL' is not a number\n" && exit 1
+			(! [[ $NEW_VAL =~ $RE ]] || check_flag "$NEW_VAL") && printf "Error: the value of --leaks-buff '%s' is not a number\n" "$NEW_VAL" && exit 1
 			ADDR_SIZE=$NEW_VAL
 		;;
 
         "-h" | "--help")
-			printf "$HELP_MSG"
+			echo "$HELP_MSG"
             exit
         ;;
 
@@ -407,9 +415,9 @@ do
     (( I = I + 1 ))
 done
 
-([ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]) && printf "Error: Missing path to project or file list.\n$HELP_MSG" && exit 1
+{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Error: Missing path to project or file list.\n%s" "$HELP_MSG" && exit 1
 
-([ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]) && echo "Error: $PROJECT_PATH is not a folder" && exit 1
+{ [ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]; } && echo "Error: $PROJECT_PATH is not a folder" && exit 1
 
 if [[ "$OSTYPE" == "darwin"* ]]
 then
@@ -417,8 +425,8 @@ then
 	AS_FUNC="fake_"
 	AS_OG=""
 	echo "extern void __attribute__((destructor)) malloc_hook_report();" > $PROJECT_PATH/fake_malloc_destructor.c
-	[ ! -z "$FILE_PATH" ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
-elif [ ! -z "$FILE_PATH" ]
+	[ -n "$FILE_PATH" ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
+elif [ -n "$FILE_PATH" ]
 then
 	SRC+="$PROJECT_PATH/fake_malloc.c "
 fi
