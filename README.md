@@ -131,11 +131,9 @@ if you use exit() all the addresses which have a reference stored in the stack g
 
 ### Example:
 
-#### Input:
+#### example.c:
 
 ```c
-// example.c:
-
 #include <stdlib.h>
 #include <string.h>
 
