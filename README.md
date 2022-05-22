@@ -69,7 +69,7 @@ mall_wrapper:
 
    - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files
 
-   - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc
+   - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
