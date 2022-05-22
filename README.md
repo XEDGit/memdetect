@@ -113,13 +113,13 @@ mall_wrapper:
 ### Reference:
 
  - `(MALLOC_WRAPPER)`:
-    - for each malloc call, it is printed on the stdout, with the library, the last two functions in the stack, the amount of bytes and the address allocated
+    - for each malloc call, it is printed on the stdout, with the library of the first function, the last two functions in the stack, the amount of bytes and the address allocated
    
  - `(FREE_WRAPPER)`:
-    - for each free call, it is printed on the stdout, with the library, the last two functions in the stack and the address freed
+    - for each free call, it is printed on the stdout, with the library of the first function, the last two functions in the stack and the address freed
 
  - `(MALLOC_FAIL)`:
-    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the library and the last two functions in the stack
+    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the library of the first function and the last two functions in the stack
 
  - `(MALLOC_ERROR)`:
     - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
