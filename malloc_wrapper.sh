@@ -26,13 +26,15 @@ RE='^[0-9]+$'
 
 EXCLUDE_FIND="! -path '*malloc_wrapper*' "
 
+EXCLUDE_RES=""
+
 GCC_FLAGS=""
 
 OUT_ARGS=""
 
 ADDR_SIZE=10000
 
-EXCLUDE_RES="*&__@"
+EXCLUDE_RES=""
 
 ONLY_SOURCE=1
 
@@ -48,7 +50,7 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\")&
 
 SRC=""
 
-HELP_MSG="Usage: ./malloc_wrapper {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-fi <filter>] [-lb <size>] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+HELP_MSG="Usage: ./malloc_wrapper {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
 
 function loop()
 {
@@ -70,7 +72,7 @@ function loop()
 
 		[ ! $CONTINUE = $'\n' ] && printf "\n"
 		
-		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
+		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
 		
 		printf "$REDB$GCC_CMD$DEF\n"
 		
@@ -116,7 +118,7 @@ function loop_osx()
 
 		[ ! $CONTINUE = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$COUNTER
+		gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
 
 		if [[ $? != 0 ]]
 		then
@@ -152,7 +154,7 @@ function loop_osx()
 
 function run()
 {
-	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES='\"$EXCLUDE_RES\"' -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
+	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 	
 	printf "$REDB$GCC_CMD$DEF\n"
 	
@@ -176,7 +178,7 @@ function run()
 
 function run_osx()
 {
-	gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DEXCLUDE_RES="\"$EXCLUDE_RES\"" -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
+	gcc -shared -fPIC $PROJECT_PATH/fake_malloc.c -o $PROJECT_PATH/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
 
 	if [[ $? != 0 ]]
 	then
@@ -298,6 +300,7 @@ do
 	case $arg in
 
         "-e" | "--exclude")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
@@ -308,9 +311,14 @@ do
         ;;
 
 		"-fi" | "--filter")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
-			EXCLUDE_RES="${ARGS[$I]}"
+			while [[ $I -le $ARGS_LEN ]]
+			do
+				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				GCC_FLAGS+=" ${ARGS[$I]}"
+				(( I = I + 1 ))
+			done
 		;;
 
 		"-ie" | "--include-ext")
@@ -326,7 +334,7 @@ do
 		;;
 
 		"-fail")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
@@ -352,6 +360,7 @@ do
 		;;
 
         "-fl" | "--flags")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
@@ -362,6 +371,7 @@ do
 		;;
 
 		"-a" | "--args")
+			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -le $ARGS_LEN ]]
 			do
@@ -552,7 +562,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES) $INCL_XMALL)
+	if (stack[2][0] != '?' && $EXCLUDE_RES $INCL_XMALL)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
@@ -608,7 +618,7 @@ void	${AS_FUNC}free(void *tofree)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES) $INCL_XMALL)
+	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
 		printf(REDB \"(FREE_WRAPPER)\" DEF \" %s - %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
