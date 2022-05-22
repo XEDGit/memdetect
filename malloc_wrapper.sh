@@ -291,7 +291,6 @@ then
 	while [[ $I -lt $ARGS_LEN ]]
 	do
 		check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
-		printf "checking ${ARGS[$I]}\n"
 		GCC_FLAGS+=" ${ARGS[$I]}"
 		(( I = I + 1 ))
 	done
