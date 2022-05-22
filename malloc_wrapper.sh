@@ -490,7 +490,7 @@ void malloc_hook_report()
 			${AS_OG}free(addresses[i].function);
 		}
 	}
-	printf(REDB \"Total leaks: %d\n\" DEF, tot_leaks);
+	printf(REDB \"Total leaks: %d\nWARNING:\" DEF \" the leaks freed by exit() are still displayed in the report\n\" DEF, tot_leaks);
 }
 
 ${AS_COMM}int init_malloc_hook()
