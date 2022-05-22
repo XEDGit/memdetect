@@ -316,7 +316,7 @@ do
 			while [[ $I -le $ARGS_LEN ]]
 			do
 				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
-				GCC_FLAGS+=" ${ARGS[$I]}"
+				EXCLUDE_RES+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
