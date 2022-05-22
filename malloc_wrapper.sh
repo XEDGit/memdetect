@@ -44,9 +44,11 @@ AS_FUNC=""
 
 AS_OG="og_"
 
+INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\")&& !strstr(stack[2], \"xrealloc\") && !strstr(stack[1], \"xrealloc\")"
+
 SRC=""
 
-HELP_MSG="Usage: ./malloc_wrapper {-f <file0> [<file1>...] | -d <directory_path>} [[-h] | [--add-path] | [-nr] [-ie] [-lb] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-fi <filter>] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+HELP_MSG="Usage: ./malloc_wrapper {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-fi <filter>] [-lb <size>] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
 
 function loop()
 {
@@ -296,17 +298,27 @@ do
 	case $arg in
 
         "-e" | "--exclude")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
-			EXCLUDE_FIND+="! -path '*${ARGS[$I + 1]}*' "
+			(( I = I + 1 ))
+			while [[ $I -le $ARGS_LEN ]]
+			do
+				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+				EXCLUDE_FIND+="! -path '*${ARGS[$I]}*' "
+				(( I = I + 1 ))
+			done
         ;;
 
 		"-fi" | "--filter")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
-			EXCLUDE_RES="${ARGS[$I + 1]}"
+			(( I = I + 1 ))
+			EXCLUDE_RES="${ARGS[$I]}"
 		;;
 
 		"-ie" | "--include-ext")
 			ONLY_SOURCE=0
+		;;
+
+		"-ix" | "--include-xmalloc")
+			INCL_XMALL=""
 		;;
 
 		"-p" | "--preserve")
@@ -540,7 +552,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES))
+	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES) $INCL_XMALL)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
@@ -596,7 +608,7 @@ void	${AS_FUNC}free(void *tofree)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES))
+	if (stack[2][0] != '?' && !strstr(stack[2], EXCLUDE_RES) && !strstr(stack[3], EXCLUDE_RES) $INCL_XMALL)
 	{
 		printf(REDB \"(FREE_WRAPPER)\" DEF \" %s - %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
