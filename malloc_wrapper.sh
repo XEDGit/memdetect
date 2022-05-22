@@ -513,7 +513,7 @@ int	malloc_hook_backtrace_readable(char ***stack_readable)
 	return (stack_size);
 }
 
-void	malloc_hook_string_edit(char *str)
+void	malloc_hook_string_edit(char *str, int lib)
 {
 	char	ch;
 	char	*start;
@@ -529,7 +529,20 @@ void	malloc_hook_string_edit(char *str)
 			str++;
 	}
 	else
-		str = &str[59];
+	{
+		if (lib)
+		{
+			str++;
+			while (*str == ' ')
+				str++;
+			while (*str != ' ')
+				*start++ = *str++;
+			*start++ = ' ';
+			*start++ = '/';
+			*start++ = ' ';
+		}
+		str = &temp[59];
+	}
 	while (*str && *str != ch)
 		*start++ = *str++;
 	if (start == temp)
@@ -560,13 +573,13 @@ void	*${AS_FUNC}malloc(size_t size)
 		init_run = 0;
 		return (${AS_OG}malloc(size));
 	}
-	malloc_hook_string_edit(stack[2]);
-	malloc_hook_string_edit(stack[3]);
+	malloc_hook_string_edit(stack[2], 0);
+	malloc_hook_string_edit(stack[3], 1);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			printf(REDB \"(MALLOC_FAIL)\" DEF \" %s - %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
+			printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
@@ -583,14 +596,14 @@ void	*${AS_FUNC}malloc(size_t size)
 			addr_i++;
 		if (addr_i == ADDR_ARR_SIZE - 1)
 		{
-			printf(REDB \"(MALLOC_ERROR)\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
+			printf(REDB \"(MALLOC_ERROR)\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
 			${AS_OG}free(stack);
 			exit (1);
 		}
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].address = ret;
-		printf(REDB \"(MALLOC_WRAPPER)\" DEF \" %s - %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
+		printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -616,11 +629,11 @@ void	${AS_FUNC}free(void *tofree)
 		init_run = 0;
 		return ;
 	}
-	malloc_hook_string_edit(stack[2]);
-	malloc_hook_string_edit(stack[3]);
+	malloc_hook_string_edit(stack[2], 0);
+	malloc_hook_string_edit(stack[3], 1);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
-		printf(REDB \"(FREE_WRAPPER)\" DEF \" %s - %s free %p\n\", stack[3], stack[2], tofree);
+		printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
 		{
 			free_count++;
