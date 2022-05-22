@@ -14,7 +14,7 @@ ARGS=("$@")
 ARGS_LEN=${#ARGS[@]}
 
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" \
-	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "-preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
+	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path")
 
 RED="\e[31m"
 
@@ -146,7 +146,9 @@ function loop_osx()
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib" && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
+
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 	printf "\nExiting\n"
 
@@ -197,7 +199,6 @@ function run_osx()
 	then
 		rm -f "$PROJECT_PATH/fake_malloc.c"
 		rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
-		rm -f "$PROJECT_PATH/fake_malloc.dylib"
 		exit 1
 	fi
 
@@ -209,7 +210,9 @@ function run_osx()
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib" && rm -f "$PROJECT_PATH/malloc_debug"
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
+
+	[ -z $PRESERVE ] && rm -f "$PROJECT_PATH/malloc_debug"
 
 }
 
@@ -274,7 +277,7 @@ then
 	else
 		while [[ $I -lt $ARGS_LEN ]]
 		do
-			check_flag ${ARGS[$I]} && break
+			[[ ${ARGS[$I]} == "-"* ]] && break
 			[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
 			FILE_PATH+=" ${ARGS[$I]}"
 			(( I = I + 1 ))
@@ -288,6 +291,7 @@ then
 	while [[ $I -lt $ARGS_LEN ]]
 	do
 		check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+		printf "checking ${ARGS[$I]}\n"
 		GCC_FLAGS+=" ${ARGS[$I]}"
 		(( I = I + 1 ))
 	done
@@ -675,9 +679,19 @@ fi
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
-	[[ "$OSTYPE" == "darwin"* ]] && run_osx || run
+	if [[ "$OSTYPE" == "darwin"* ]]
+	then 
+		run_osx
+	else
+		run
+	fi
 else
-	[[ "$OSTYPE" == "darwin"* ]] && loop_osx || loop
+	if [[ "$OSTYPE" == "darwin"* ]]
+	then 
+		loop_osx
+	else
+		loop
+	fi
 fi
 
 exit 0
