@@ -1,5 +1,14 @@
 #!/bin/bash
 
+printf "$REDB================= malloc_wrapper by: ==================
+ _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
+   _|  _|    _|        _|    _|  _|            _|_|_|_|  
+     _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
+   _|  _|    _|        _|    _|  _|    _|  _|    _|      
+ _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|      _|_|
+=======================================================
+ $DEF"
+
 ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
@@ -37,10 +46,7 @@ AS_OG="og_"
 
 SRC=""
 
-
 HELP_MSG="Usage: ./malloc_wrapper {-f <file0> [<file1>...] | -d <directory_path>} [[-h] | [--add-path] | [-nr] [-ie] [-lb] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-fi <filter>] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
-
-I=0
 
 function loop()
 {
@@ -253,40 +259,42 @@ function check_flag()
 	return 1
 }
 
-printf "$REDB============== malloc_wrapper by: ===============
- __    __ ________ _______   ______  __   __     
-|  \\  |  |        |       \\ /      \\|  \\ |  \\    
-| \$\$  | \$| \$\$\$\$\$\$\$| \$\$\$\$\$\$\$| \$\$\$\$\$\$ | \$\$_| \$\$_   
- \\\$\$\\/  \$| \$\$__   | \$\$  | \$| \$\$ __\\\$|  |   \$\$ \\  
-  >\$\$  \$\$| \$\$  \\  | \$\$  | \$| \$\$|    | \$\$\\\$\$\$\$\$\$  
- /  \$\$\$\$\\| \$\$\$\$\$  | \$\$  | \$| \$\$ \\\$\$\$| \$\$ | \$\$ __ 
-|  \$\$ \\\$\$| \$\$_____| \$\$__/ \$| \$\$__| \$| \$\$ | \$\$|  \\
-| \$\$  | \$| \$\$     | \$\$    \$\$\\\$\$    \$| \$\$  \\\$\$  \$\$
- \\\$\$   \\\$\$\\\$\$\$\$\$\$\$\$\\\$\$\$\$\$\$\$  \\\$\$\$\$\$\$ \\\$\$   \\\$\$\$\$
- ================================================
- $DEF"
+I=0
+
+if ! check_flag ${ARGS[$I]}
+then
+	if [ -d ${ARGS[$I]} ]
+	then
+		PROJECT_PATH=${ARGS[$I]%/}
+		((I = I + 1))
+	else
+		while [[ $I -le $ARGS_LEN ]]
+		do
+			check_flag ${ARGS[$I]} && break
+			[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
+			FILE_PATH+=" ${ARGS[$I]}"
+			(( I = I + 1 ))
+		done
+		PROJECT_PATH='.'
+	fi
+fi
+
+if ! check_flag ${ARGS[$I]}
+then
+	while [[ $I -le $ARGS_LEN ]]
+	do
+		check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
+		GCC_FLAGS+=" ${ARGS[$I]}"
+		(( I = I + 1 ))
+	done
+	(( I = I + 1 ))
+fi
 
 while [[ $I -le $ARGS_LEN ]]
 do
     arg=${ARGS[$I]}
 	case $arg in
 
-		"-d" | "-dir" | "--directory")
-			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
-			PROJECT_PATH=${ARGS[$I + 1]%/}
-		;;
-		
-		"-f" | "--files")
-			(( I = I + 1 ))
-			while [[ $I -le $ARGS_LEN ]]
-			do
-				check_flag ${ARGS[$I]} && (( I = I - 1 )) && break
-				[ ! -e ${ARGS[$I]} ] && printf "Error: ${ARGS[$I]} not found\n" && exit 1
-				FILE_PATH+=" ${ARGS[$I]}"
-				(( I = I + 1 ))
-			done
-			PROJECT_PATH='.'
-		;;
         "-e" | "--exclude")
 			check_flag ${ARGS[$I + 1]} && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a flag\n" && exit 1
 			EXCLUDE_FIND+="! -path '*${ARGS[$I + 1]}*' "
@@ -374,9 +382,9 @@ do
     (( I = I + 1 ))
 done
 
-([ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]) && printf "Error: Missing --d or --f option.\n$HELP_MSG" && exit 1
+([ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]) && printf "Error: Missing path to project or file list.\n$HELP_MSG" && exit 1
 
-([ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]) && echo "Error: $PROJECT_PATH is not a folder\n" && exit 1
+([ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]) && echo "Error: $PROJECT_PATH is not a folder" && exit 1
 
 if [[ "$OSTYPE" == "darwin"* ]]
 then
