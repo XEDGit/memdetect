@@ -48,22 +48,22 @@ mall_wrapper:
 
  - #### Compiling:
 
-   - `-fl` `--flags flag0 flag1...`: Another way to specify flags to use when compiling with gcc
+   - `-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
    
-   - `-e` `--exclude folder_name`: Specify a folder inside the `directory_path` which gets excluded from compiling
+   - `-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
 
  - #### Executing:
    
-   - `-a` `--args arg0 arg1...`: Specify arguments to run with the executable
+   - `-a` `--args` arg0 arg1...: Specify arguments to run with the executable
 
 
  - #### Fail (Use only one):
 
-   - `-fail number`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+   - `-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-   - `-fail all`: Adding this flag will fail all the malloc calls
+   - `-fail` all: Adding this flag will fail all the malloc calls
 
-   - `-fail loop start_from`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd            execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue
+   - `-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd            execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue
 
  - #### Output:
 
@@ -73,7 +73,7 @@ mall_wrapper:
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
-   - `-fi` `--filter arg0 arg1...`: Filter out results from the wrapper output if substring `arg` is found inside the output line
+   - `-fi` `--filter` arg0 arg1...: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
  - #### Output files:
 
@@ -81,7 +81,7 @@ mall_wrapper:
 
  - #### Program settings:
 
-   - `-lb` `--leaks-buff size`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+   - `-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
      
    - `-h` `--help`: Display help message
  
