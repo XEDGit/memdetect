@@ -36,10 +36,12 @@ You can integrate this program with Makefile by executing this command in your M
 ```shell
 echo >> ./Makefile '
 mall_wrapper:
-    /path/to/malloc_wrapper.sh /path/to/project $(YOUR_FLAGS) $(YOUR_LIBS) $(YOUR_HEADERS) # add malloc_wrapper flags here'
+    /path/to/malloc_wrapper.sh /path/to/project $(GCC_FLAGS) # add malloc_wrapper flags here'
 ```
 
 ## Run:
+
+You can either run malloc_wrapper on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
 
 ### Usage:
     ./malloc_wrapper.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [optional flags]
