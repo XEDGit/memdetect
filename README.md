@@ -71,7 +71,8 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
    - `-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
 
-   - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files
+   - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+   **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
    - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
