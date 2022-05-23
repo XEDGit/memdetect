@@ -330,7 +330,8 @@ do
 			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
-				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&" && (( II = II + 1))
+				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&"
+				(( II = II + 1))
 				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
 				(( I = I + 1 ))
 			done
@@ -345,7 +346,8 @@ do
 			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
-				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&" && (( II = II + 1))
+				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&"
+				(( II = II + 1))
 				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
 				(( I = I + 1 ))
 			done
