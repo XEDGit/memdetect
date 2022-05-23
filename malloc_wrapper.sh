@@ -382,7 +382,6 @@ do
 					then
 						COUNTER=${ARGS[$I + 2]}
 					else
-						echo "DIOPORCO"
 						COUNTER=1
 					fi
 				elif [ "$NEW_VAL" = "all" ]
@@ -467,9 +466,6 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
 
 #define RED \"\e[31m\"
 
@@ -501,7 +497,7 @@ static int		malloc_count = 0;
 static int		addr_i = 0;
 static int		addr_rep = 0;
 static t_addr	addresses[ADDR_ARR_SIZE] = {0};
-static pid_t	parent_pid;
+static pid_t	parent_pid = 0;
 
 ${NO_REPORT}void __attribute__((constructor)) malloc_hook_pid_detect();
 ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
@@ -509,7 +505,8 @@ ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
 void malloc_hook_pid_detect()
 {
 	init_run = 1;
-	parent_pid = getpid();
+	if (!parent_pid)
+		parent_pid = getpid();
 	init_run = 0;
 }
 
@@ -625,7 +622,6 @@ void	*${AS_FUNC}malloc(size_t size)
 	char		**stack;
 	int			stack_size;
 	static int	malloc_fail = 0;
-	pid_t		child;
 
 	${AS_COMM}if (!og_malloc)
 	${AS_COMM}	if (init_malloc_hook())
@@ -646,17 +642,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			if (!(child = fork()))
-			{	
-				printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
-				exit(0);
-			}
-			else
-			{
-				usleep(10);
-				if (kill(child, 0) == 0)
-					kill(child, SIGKILL);
-			}
+			printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
@@ -680,17 +666,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].address = ret;
-		if (!(child = fork()))
-		{	
-			printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
-			exit(0);
-		}
-		else
-		{
-			usleep(10);
-			if (kill(child, 0) == 0)
-				kill(child, SIGKILL);
-		}
+		printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -702,7 +678,6 @@ void	*${AS_FUNC}malloc(size_t size)
 void	${AS_FUNC}free(void *tofree)
 {
 	char	**stack;
-	pid_t	child;
 
 	if (init_run)
 	{
@@ -721,17 +696,7 @@ void	${AS_FUNC}free(void *tofree)
 	malloc_hook_string_edit(stack[3], 1);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
-		if (!(child = fork()))
-		{
-			printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
-			exit(0);
-		}
-		else
-		{
-			usleep(10);
-			if (kill(child, 0) == 0)
-				kill(child, SIGKILL);
-		}
+		printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
 		{
 			free_count++;
