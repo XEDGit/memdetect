@@ -8,8 +8,9 @@ A shell script to compile your file or project with a wrapper of malloc() and fr
 
   - 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen" />
 
-
   - 🐧 <img src="https://img.shields.io/badge/Linux-working-brightgreen" />
+
+  - 🪟 <img src="https://img.shields.io/badge/Windows-working-brightgreen" /> **using WSL**
 
 ### Enviroment:
 
@@ -18,7 +19,6 @@ A shell script to compile your file or project with a wrapper of malloc() and fr
 ### Output file:
 
   - 📄 malloc_debug
-
 
 ## Setup:
 
