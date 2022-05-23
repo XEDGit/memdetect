@@ -19,7 +19,7 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
-FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" \
+FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-il" "--include-libs" \
 	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
 
 RE='^[0-9]+$'
@@ -31,6 +31,8 @@ EXCLUDE_RES=""
 GCC_FLAGS=""
 
 OUT_ARGS=""
+
+INCL_LIB=0
 
 ADDR_SIZE=10000
 
@@ -72,7 +74,7 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
+		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -INCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
 		
 		printf "$REDB%s$DEF\n" "$GCC_CMD"
 		
@@ -118,7 +120,7 @@ function loop_osx()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
+		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
 
 		if [[ $? != 0 ]]
 		then
@@ -156,7 +158,7 @@ function loop_osx()
 
 function run()
 {
-	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
+	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 	
 	printf "$REDB%s$DEF\n" "$GCC_CMD"
 	
@@ -180,7 +182,7 @@ function run()
 
 function run_osx()
 {
-	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
+	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
 
 	if [[ $? != 0 ]]
 	then
@@ -333,6 +335,10 @@ do
 
 		"-ie" | "--include-ext")
 			ONLY_SOURCE=0
+		;;
+
+		"-il" | "--include-lib")
+			INCL_LIB=1
 		;;
 
 		"-ix" | "--include-xmalloc")
@@ -496,7 +502,7 @@ void malloc_hook_report()
 		{
 			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
 				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
-			else				
+			else
 				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
 		}
@@ -535,13 +541,25 @@ void	malloc_hook_string_edit(char *str, int lib)
 	temp = str;
 	if (!MAC_OS_SYSTEM)
 	{
+		char *lib_p = 0;
+
 		ch = '+';
 		while (*str && *(str - 1) != '(')
-			str++;
+			if (*str++ == '/')
+				lib_p = str;
+		if (INCL_LIB && lib)
+		{
+			while (*lib_p && *lib_p != '(')
+				*start++ = *lib_p++;
+			*start++ = ' ';
+			*start++ = '/';
+			*start++ = ' ';
+			temp = start;
+		}
 	}
 	else
 	{
-		if (lib)
+		if (INCL_LIB && lib)
 		{
 			str++;
 			while (*str == ' ')
