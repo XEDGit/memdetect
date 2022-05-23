@@ -20,7 +20,7 @@ ARGS=("$@")
 ARGS_LEN=${#ARGS[@]}
 
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-il" "--include-libs" \
-	   "-fi" "--filter" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
+	   "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
 
 RE='^[0-9]+$'
 
@@ -322,15 +322,34 @@ do
 			done
         ;;
 
-		"-fi" | "--filter")
+		"-fo" | "--filter-out")
 			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
 			(( I = I + 1 ))
+			II=0
+			EXCLUDE_RES="&& ("
 			while [[ $I -lt $ARGS_LEN ]]
 			do
 				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
-				EXCLUDE_RES+=" && !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
+				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&" && (( II = II + 1))
+				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
 				(( I = I + 1 ))
 			done
+			EXCLUDE_RES+=")"
+		;;
+
+		"-fi" | "--filter-in")
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			(( I = I + 1 ))
+			II=0
+			EXCLUDE_RES="&& !("
+			while [[ $I -lt $ARGS_LEN ]]
+			do
+				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&" && (( II = II + 1))
+				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
+				(( I = I + 1 ))
+			done
+			EXCLUDE_RES+=")"
 		;;
 
 		"-ie" | "--include-ext")
