@@ -10,7 +10,7 @@ A shell script to compile your file or project with a wrapper of malloc() and fr
 
   - 🐧 <img src="https://img.shields.io/badge/Linux-working-brightgreen" />
 
-  - 🪟 <img src="https://img.shields.io/badge/Windows 10/11-working-brightgreen" /> **using WSL**
+  - 🪟 <img src="https://img.shields.io/badge/Windows 10/11-working-brightgreen" /> **using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)**
 
 ### Enviroment:
 
