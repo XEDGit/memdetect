@@ -451,7 +451,8 @@ then
 	AS_COMM="//"
 	AS_FUNC="fake_"
 	AS_OG=""
-	echo "extern void __attribute__((destructor)) malloc_hook_report();" > $PROJECT_PATH/fake_malloc_destructor.c
+	echo "extern void __attribute__((destructor)) malloc_hook_report();
+extern void __attribute__((constructor)) malloc_hook_pid_detect();" > $PROJECT_PATH/fake_malloc_destructor.c
 	[ -n "$FILE_PATH" ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
 elif [ -n "$FILE_PATH" ]
 then
@@ -464,7 +465,11 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <execinfo.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define RED \"\e[31m\"
 
@@ -496,12 +501,21 @@ static int		malloc_count = 0;
 static int		addr_i = 0;
 static int		addr_rep = 0;
 static t_addr	addresses[ADDR_ARR_SIZE] = {0};
+static pid_t	parent_pid;
 
+${NO_REPORT}void __attribute__((constructor)) malloc_hook_pid_detect();
 ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
+
+void malloc_hook_pid_detect()
+{
+	init_run = 1;
+	parent_pid = getpid();
+	init_run = 0;
+}
 
 int	malloc_hook_check_content(unsigned char *str)
 {
-	while (*str && *str >= 0 && *str <= 128)
+	while (*str && *str >= 32 && *str <= 126)
 		str++;
 	if (!*str)
 		return (0);
@@ -512,6 +526,8 @@ void malloc_hook_report()
 {
 	int	tot_leaks;
 
+	if (parent_pid != getpid())
+		return ;
 	tot_leaks = 0;
 	init_run = 1;
 	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: \" RED \"%d\" DEF \"\n\tFree calls: \" RED \"%d\" DEF \"\n\tFree calls to 0x0: \" RED \"%d\" DEF \"\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
@@ -609,6 +625,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	char		**stack;
 	int			stack_size;
 	static int	malloc_fail = 0;
+	pid_t		child;
 
 	${AS_COMM}if (!og_malloc)
 	${AS_COMM}	if (init_malloc_hook())
@@ -629,7 +646,17 @@ void	*${AS_FUNC}malloc(size_t size)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
+			if (!(child = fork()))
+			{	
+				printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
+				exit(0);
+			}
+			else
+			{
+				usleep(10);
+				if (kill(child, 0) == 0)
+					kill(child, SIGKILL);
+			}
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
@@ -653,7 +680,17 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].address = ret;
-		printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
+		if (!(child = fork()))
+		{	
+			printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
+			exit(0);
+		}
+		else
+		{
+			usleep(10);
+			if (kill(child, 0) == 0)
+				kill(child, SIGKILL);
+		}
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -665,6 +702,7 @@ void	*${AS_FUNC}malloc(size_t size)
 void	${AS_FUNC}free(void *tofree)
 {
 	char	**stack;
+	pid_t	child;
 
 	if (init_run)
 	{
@@ -683,7 +721,17 @@ void	${AS_FUNC}free(void *tofree)
 	malloc_hook_string_edit(stack[3], 1);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
-		printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
+		if (!(child = fork()))
+		{
+			printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
+			exit(0);
+		}
+		else
+		{
+			usleep(10);
+			if (kill(child, 0) == 0)
+				kill(child, SIGKILL);
+		}
 		if (tofree)
 		{
 			free_count++;
