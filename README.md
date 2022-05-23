@@ -69,6 +69,8 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
  - #### Output:
 
+   - `-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+
    - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files
 
    - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
@@ -115,13 +117,13 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 ### Reference:
 
  - `(MALLOC_WRAPPER)`:
-    - for each malloc call, it is printed on the stdout, with the library of the first function, the last two functions in the stack, the amount of bytes and the address allocated
+    - for each malloc call, it is printed on the stdout, with the last two functions in the stack, the amount of bytes and the address allocated
    
  - `(FREE_WRAPPER)`:
-    - for each free call, it is printed on the stdout, with the library of the first function, the last two functions in the stack and the address freed
+    - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
 
  - `(MALLOC_FAIL)`:
-    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the library of the first function and the last two functions in the stack
+    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the last two functions in the stack
 
  - `(MALLOC_ERROR)`:
     - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
@@ -162,10 +164,10 @@ xedgit@pc:~ $ malloc_wrapper example.c -fail 3
 ```
 
     DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:
-    (MALLOC_WRAPPER) libdyld.dylib / start -> main allocated 3 bytes at 0x7fa643c03590
-    (MALLOC_WRAPPER) malloc_debug / main -> strdup allocated 3 bytes at 0x7fa643c03850
-    (MALLOC_FAIL)    malloc_debug / main -> strdup malloc num 3 failed
-    (FREE_WRAPPER)   libdyld.dylib / start -> main free 0x7fa643c03850
+    (MALLOC_WRAPPER) start -> main allocated 3 bytes at 0x7fa643c03590
+    (MALLOC_WRAPPER) main -> strdup allocated 3 bytes at 0x7fa643c03850
+    (MALLOC_FAIL)    main -> strdup malloc num 3 failed
+    (FREE_WRAPPER)   start -> main free 0x7fa643c03850
     (MALLOC_REPORT)
             Malloc calls: 2
             Free calls: 1
