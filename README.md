@@ -77,7 +77,9 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
-   - `-fi` `--filter` arg0 arg1...: Filter out results from the wrapper output if substring `arg` is found inside the output line
+   - `-fi` `--filter-in` arg0 arg1...: Show only results from the wrapper output if substring `arg` is found inside the output line
+
+   - `-fo` `--filter-out` arg0 arg1...: Filter out results from the wrapper output if substring `arg` is found inside the output line
 
  - #### Output files:
 
@@ -110,7 +112,7 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
 #### Run with options
 
-    ./malloc_wrapper.sh shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include -fail loop --filter rl_ -e examples
+    ./malloc_wrapper.sh shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include -fail loop --filter-out rl_ -e examples
 
 ## Understanding the output:
 
