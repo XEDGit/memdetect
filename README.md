@@ -1,6 +1,6 @@
 # memdetect
 <img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
-A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.  
+A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.
 P.S. It also fails them!
 
 ## Info:
