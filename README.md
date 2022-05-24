@@ -1,5 +1,5 @@
 # memdetect
-<img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
+<img src="https://img.shields.io/badge/Memory management-5805B0?style=for-the-badge&label=Tool&logo=github&logoColor=white" />
 A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.
 P.S. It also fails them!
 
