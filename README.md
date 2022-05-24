@@ -5,21 +5,21 @@ P.S. It also fails them!
 
 ## Info:
 
-### Platform:
+### Platforms:
 
-  - 🍏 <img src="https://img.shields.io/badge/MacOs-working-brightgreen" />
+<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=MacOS&logo=apple&logoColor=white" />
 
-  - 🐧 <img src="https://img.shields.io/badge/Linux-working-brightgreen" />
+<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=Linux&logo=linux&logoColor=white" />
 
-  - 🪟 <img src="https://img.shields.io/badge/Windows 10/11-compatible-brightgreen" /> **using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)**
+[<img src="https://img.shields.io/badge/Compatible via WSL-52CF44?style=for-the-badge&label=Windows&logo=windows&logoColor=white" />](https://docs.microsoft.com/en-us/windows/wsl/install)
 
 ### Enviroment:
 
-  - 🖥️ <img src="https://img.shields.io/badge/C-gcc-blueviolet" />
+<img src="https://img.shields.io/badge/GCC-00599C?style=for-the-badge&logo=c&logoColor=white" />
 
 ### Output file:
 
-  - 📄 malloc_debug
+📄 malloc_debug
 
 ## Setup:
 
