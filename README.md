@@ -1,6 +1,7 @@
-# malloc_wrapper
+# memdetect
 <img src="https://img.shields.io/badge/Tools-debug-blueviolet" />
-A shell script to compile your file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better!
+A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.  
+P.S. It also fails them!
 
 ## Info:
 
@@ -22,29 +23,42 @@ A shell script to compile your file or project with a wrapper of malloc() and fr
 
 ## Setup:
 
-### Adding malloc_wrapper to your $PATH:
+### Adding memdetect to your $PATH:
 You can add this program to your $PATH by adding this flag
 
 ```console
-./malloc_wrapper.sh --add-path
+./memdetect.sh --add-path
 ```
-from now on you can just type `malloc_wrapper` in your terminal from any folder in the system!
+from now on you can just type `memdetect` in your terminal from any folder in the system!
  
 ### Makefile integration:
 You can integrate this program with Makefile by executing this command in your Makefile path
 
 ```shell
 echo >> ./Makefile '
-mall_wrapper:
-    /path/to/malloc_wrapper.sh /path/to/project $(GCC_FLAGS) # add malloc_wrapper flags here'
+mem:
+    /path/to/memdetect.sh /path/to/project $(GCC_FLAGS) # add memdetect flags here'
+```
+Another useful integration, if you want the freedom of executing with different flags everytime
+
+```shell
+echo >> ./Makefile '
+mem:
+    /path/to/memdetect.sh /path/to/project $(GCC_FLAGS) $(1)'
+```
+
+Which can be executed with
+
+```shell
+make mem 1='-fail 2'
 ```
 
 ## Run:
 
-You can either run malloc_wrapper on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
+You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
 
 ### Usage:
-    ./malloc_wrapper.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [optional flags]
+    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [optional flags]
 
 ### Flags:
 
@@ -65,7 +79,7 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
    - `-fail` all: Adding this flag will fail all the malloc calls
 
-   - `-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd            execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue
+   - `-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
 
  - #### Output:
 
@@ -78,9 +92,9 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
-   - `-fi` `--filter-in` arg0 arg1...: Show only results from the wrapper output if substring `arg` is found inside the output line
+   - `-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
 
-   - `-fo` `--filter-out` arg0 arg1...: Filter out results from the wrapper output if substring `arg` is found inside the output line
+   - `-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
 
  - #### Output files:
 
@@ -92,7 +106,7 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
      
    - `-h` `--help`: Display help message
  
-   - `--add-path`: adds malloc_wrapper to a $PATH of your choice
+   - `--add-path`: adds memdetect executable to a $PATH of your choice
 
    
  All the optional flags will be added to the gcc command in writing order
@@ -101,19 +115,19 @@ You can either run malloc_wrapper on **files** by specifying their name, or with
 
 #### Run with single file
 
-    ./malloc_wrapper.sh ft_split.c
+    ./memdetect.sh ft_split.c
    
 #### Run with multiple files
 
-    ./malloc_wrapper.sh ft_split.c ft_strlen.c
+    ./memdetect.sh ft_split.c ft_strlen.c
 
 #### Run with project folder
 
-    ./malloc_wrapper.sh ..
+    ./memdetect.sh ..
 
 #### Run with options
 
-    ./malloc_wrapper.sh shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include -fail loop --filter-out rl_ -e examples
+    ./memdetect.sh shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include -fail loop --filter-out rl_ -e examples
 
 ## Understanding the output:
 
@@ -162,8 +176,8 @@ int main(void)
 #### Output:
 
 ```console
-# With malloc_wrapper in $PATH
-xedgit@pc:~ $ malloc_wrapper example.c -fail 3
+# With memdetect in $PATH
+xedgit@pc:~ $ memdetect example.c -fail 3
 ```
 
     DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:

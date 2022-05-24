@@ -6,7 +6,7 @@ REDB="\e[1;31m"
 
 DEF="\e[0m"
 
-printf "$REDB================= malloc_wrapper by: ==================
+printf "$REDB================= memdetect by: ==================
  _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
    _|  _|    _|        _|    _|  _|            _|_|_|_|  
      _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
@@ -24,7 +24,7 @@ FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--
 
 RE='^[0-9]+$'
 
-EXCLUDE_FIND="! -path '*malloc_wrapper*' "
+EXCLUDE_FIND="! -path '*memdetect*' "
 
 EXCLUDE_RES=""
 
@@ -52,7 +52,7 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") 
 
 SRC=""
 
-HELP_MSG="Usage: ./malloc_wrapper {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+HELP_MSG="Usage: ./memdetect {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
 
 function loop()
 {
@@ -68,9 +68,13 @@ function loop()
 		
 		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
 		
+		stty raw -echo
+
 		read -rn1 CONTINUE
 		
-		[ "$CONTINUE" == "q" ] && rm -f "$PROJECT_PATH/fake_malloc.c" && printf "\nExiting\n" && exit 0
+		stty -raw echo
+
+		{ [ "$CONTINUE" == "q" ] || [ "$CONTINUE" = $'\e' ]; } && break
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
@@ -95,6 +99,8 @@ function loop()
 
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 
+	printf "\nExiting\n"
+
 }
 
 function loop_osx()
@@ -111,12 +117,13 @@ function loop_osx()
 		
 		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
 		
+		stty raw -echo
+
 		read -rn1 CONTINUE
 		
-		if [ "$CONTINUE" == "q" ]
-		then
-			break
-		fi
+		stty -raw echo
+
+		{ [ "$CONTINUE" == "q" ] || [ "$CONTINUE" = $'\e' ]; } && break
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
@@ -241,7 +248,7 @@ function add_to_path()
 
 	printf "\n"
 
-	{ [[ $PATH_CHOICE -lt 0 ]] || [[ $PATH_CHOICE -gt $((CONT - 1)) ]] || [[ ! ($PATH_CHOICE =~ $RE) ]]; } && echo "Index not in range" && exit 1
+	{ [[ ! ("$PATH_CHOICE" =~ $RE) ]] || [[ "$PATH_CHOICE" -lt 0 ]] || [[ "$PATH_CHOICE" -gt $((CONT - 1)) ]]; } && echo "Index not in range" && exit 1
 
 	for VAL in $PATH_ARR
 	do
@@ -249,15 +256,15 @@ function add_to_path()
 		(( CONT2 = CONT2 + 1 ))
 	done
 
-	[ ! -e "./malloc_wrapper.sh" ] && printf "Error: ./malloc_wrapper.sh not found\n" && exit 1
+	[ ! -e "./memdetect.sh" ] && printf "Error: ./memdetect.sh not found\n" && exit 1
 
 	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
 
 	if [ -w "$PATH_CHOICE" ]
 	then
-		cp ./malloc_wrapper.sh "${PATH_CHOICE%/}"/malloc_wrapper
+		cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
 	else
-		sudo cp ./malloc_wrapper.sh "${PATH_CHOICE%/}"/malloc_wrapper
+		sudo cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
 	fi
 
 	printf "Done!\n"
@@ -312,7 +319,7 @@ do
 	case $arg in
 
         "-e" | "--exclude")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
@@ -323,7 +330,7 @@ do
         ;;
 
 		"-fo" | "--filter-out")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
 			II=0
 			EXCLUDE_RES="&& ("
@@ -339,7 +346,7 @@ do
 		;;
 
 		"-fi" | "--filter-in")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
 			II=0
 			EXCLUDE_RES="&& !("
@@ -371,7 +378,7 @@ do
 		;;
 
 		"-fail")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
@@ -397,7 +404,7 @@ do
 		;;
 
         "-fl" | "--flags")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a malloc_wrapper flag\n" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
@@ -408,7 +415,7 @@ do
 		;;
 
 		"-a" | "--args")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: %s flag value '%s' is a malloc_wrapper flag\n" "${ARGS[$I]}" "${ARGS[$I + 1]}" && exit 1
+			check_flag "${ARGS[$I + 1]}" && printf "Error: %s flag value '%s' is a memdetect flag\n" "${ARGS[$I]}" "${ARGS[$I + 1]}" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
