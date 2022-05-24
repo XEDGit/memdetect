@@ -89,7 +89,7 @@ function loop()
 			continue
 		fi
 		
-		printf "$REDB%s/malloc_debug%Ss:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
+		printf "$REDB%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
 		
 		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
