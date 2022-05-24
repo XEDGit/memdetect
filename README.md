@@ -11,7 +11,7 @@ P.S. It also fails them!
 
   - 🐧 <img src="https://img.shields.io/badge/Linux-working-brightgreen" />
 
-  - 🪟 <img src="https://img.shields.io/badge/Windows 10/11-working-brightgreen" /> **using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)**
+  - 🪟 <img src="https://img.shields.io/badge/Windows 10/11-compatible-brightgreen" /> **using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)**
 
 ### Enviroment:
 
@@ -181,8 +181,8 @@ xedgit@pc:~ $ memdetect example.c -fail 3
 ```
 
     DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:
-    (MALLOC_WRAPPER) start -> main allocated 3 bytes at 0x7fa643c03590
-    (MALLOC_WRAPPER) main -> strdup allocated 3 bytes at 0x7fa643c03850
+    (MALLOC_WRAPPER 1) start -> main allocated 3 bytes at 0x7fa643c03590
+    (MALLOC_WRAPPER 2) main -> strdup allocated 3 bytes at 0x7fa643c03850
     (MALLOC_FAIL)    main -> strdup malloc num 3 failed
     (FREE_WRAPPER)   start -> main free 0x7fa643c03850
     (MALLOC_REPORT)

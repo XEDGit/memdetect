@@ -244,9 +244,7 @@ function add_to_path()
 
 	printf "Select index: "
 
-	read -rn${#CONT} PATH_CHOICE
-
-	printf "\n"
+	read -r PATH_CHOICE
 
 	{ [[ ! ("$PATH_CHOICE" =~ $RE) ]] || [[ "$PATH_CHOICE" -lt 0 ]] || [[ "$PATH_CHOICE" -gt $((CONT - 1)) ]]; } && echo "Index not in range" && exit 1
 
@@ -260,14 +258,15 @@ function add_to_path()
 
 	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
 
+	printf "${REDB}Adding memdetect to $PATH_CHOICE${DEF}\n"
+	
 	if [ -w "$PATH_CHOICE" ]
 	then
 		cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
 	else
+		set -x
 		sudo cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
 	fi
-
-	printf "Done!\n"
 
 }
 
@@ -673,7 +672,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].address = ret;
-		printf(REDB \"(MALLOC_WRAPPER) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", stack[3], stack[2], size, ret);
+		printf(REDB \"(MALLOC_WRAPPER %d) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", malloc_count, stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
