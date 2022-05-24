@@ -85,7 +85,7 @@ function loop()
 			continue
 		fi
 		
-		echo "$REDB$PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF"
+		printf "$REDB%s/malloc_debug%Ss:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
 		
 		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -138,7 +138,7 @@ function loop_osx()
 			continue
 		fi
 
-		echo "${RED}DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS:$DEF"
+		printf "${REDB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 		
 		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
