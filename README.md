@@ -1,5 +1,5 @@
 # memdetect
-<img src="https://img.shields.io/badge/Memory management-5805B0?style=for-the-badge&label=Tool&logo=github&logoColor=white" />
+[<img src="https://img.shields.io/badge/Memory management-5805B0?style=for-the-badge&label=Tool&logo=github&logoColor=white" />](https://github.com/XEDGit/memdetect)
 A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.
 P.S. It also fails them!
 
@@ -7,21 +7,30 @@ P.S. It also fails them!
 
 ### Platforms:
 
-<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=MacOS&logo=apple&logoColor=white" />
+[<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=MacOS&logo=apple&logoColor=white" />](https://github.com/XEDGit/memdetect)
 
-<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=Linux&logo=linux&logoColor=white" />
+[<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=Linux&logo=linux&logoColor=white" />](https://github.com/XEDGit/memdetect)
 
 [<img src="https://img.shields.io/badge/Compatible via WSL-52CF44?style=for-the-badge&label=Windows&logo=windows&logoColor=white" />](https://docs.microsoft.com/en-us/windows/wsl/install)
 
 ### Enviroment:
 
-<img src="https://img.shields.io/badge/GCC-00599C?style=for-the-badge&logo=c&logoColor=white" />
+[<img src="https://img.shields.io/badge/GCC-00599C?style=for-the-badge&logo=c&logoColor=white" />](https://github.com/XEDGit/memdetect)
 
 ### Output file:
 
 📄 malloc_debug
 
 ## Setup:
+
+### Installation:
+This program is made by a single shell executable so it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
+
+```console
+git clone git@github.com:XEDGit/memdetect.git
+cd memdetect
+./memdetect.sh
+```
 
 ### Adding memdetect to your $PATH:
 You can add this program to your $PATH by adding this flag
