@@ -6,20 +6,11 @@ REDB="\e[1;31m"
 
 DEF="\e[0m"
 
-printf "$REDB================= memdetect by: ==================
- _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
-   _|  _|    _|        _|    _|  _|            _|_|_|_|  
-     _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
-   _|  _|    _|        _|    _|  _|    _|  _|    _|      
- _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|      _|_|
-=======================================================
-$DEF"
-
 ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
-FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-il" "--include-libs" \
+FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-il" "--include-libs" "-o" "--output" \
 	   "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
 
 RE='^[0-9]+$'
@@ -430,14 +421,40 @@ do
 			ADDR_SIZE=$NEW_VAL
 		;;
 
+		"-nr" | "--no-report")
+			NO_REPORT="// "
+		;;
+
+		"-o" | "--output")
+			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			(( I = I + 1 ))
+			if [ -f "${ARGS[$I]}" ]
+			then
+				printf "Overwrite existing file \"${ARGS[$I]}\"? [y/N]"
+				read -rn1 OUTPUT_CHOICE
+				if [ "$OUTPUT_CHOICE" = "y" ] || [ "$OUTPUT_CHOICE" = "Y" ]
+				then
+					printf "\n"
+				 	rm -f "${ARGS[$I]}"
+				else
+					printf "\nExiting\n"
+					exit 1
+				fi
+			fi
+			touch "${ARGS[$I]}"
+			[ ! -f "${ARGS[$I]}" ] && printf "Failed creating output file\n" && exit 1
+			echo "Output file ready!"
+			exec 1>"${ARGS[$I]}"
+			exec 2>&1
+			REDB=""
+			RED=""
+			DEF=""
+		;;
+
         "-h" | "--help")
 			echo "$HELP_MSG"
             exit
         ;;
-
-		"-nr" | "--no-report")
-			NO_REPORT="// "
-		;;
 
 		"--add-path")
 			add_to_path
@@ -473,16 +490,17 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <unistd.h>
 #include <stdlib.h>
 
-#define RED \"\e[31m\"
+#define RED \"$RED\"
 
-#define REDB \"\e[1;31m\"
+#define REDB \"$REDB\"
 
-#define DEF \"\e[0m\"
+#define DEF \"$DEF\"
 
 typedef struct s_addr {
 	void	*address;
 	char	*function;
 	int		bytes;
+	int		index;
 }	t_addr;
 
 #ifdef __APPLE__
@@ -541,9 +559,9 @@ void malloc_hook_report()
 		if (addresses[i].address)
 		{
 			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
-				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
+				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, addresses[i].index, tot_leaks++, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
 			else
-				printf(REDB \"%d)\" DEF \"\tFrom \" RED \"%s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, ++tot_leaks, addresses[i].function, addresses[i].bytes, addresses[i].address);
+				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
 		}
 	}
@@ -570,7 +588,7 @@ int	malloc_hook_backtrace_readable(char ***stack_readable)
 	return (stack_size);
 }
 
-void	malloc_hook_string_edit(char *str, int lib)
+void	malloc_hook_string_edit(char *str)
 {
 	char	ch;
 	char	*start;
@@ -587,7 +605,7 @@ void	malloc_hook_string_edit(char *str, int lib)
 		while (*str && *(str - 1) != '(')
 			if (*str++ == '/')
 				lib_p = str;
-		if (INCL_LIB && lib)
+		if ($INCL_LIB)
 		{
 			while (*lib_p && *lib_p != '(')
 				*start++ = *lib_p++;
@@ -599,7 +617,7 @@ void	malloc_hook_string_edit(char *str, int lib)
 	}
 	else
 	{
-		if (INCL_LIB && lib)
+		if ($INCL_LIB)
 		{
 			str++;
 			while (*str == ' ')
@@ -642,8 +660,8 @@ void	*${AS_FUNC}malloc(size_t size)
 		init_run = 0;
 		return (${AS_OG}malloc(size));
 	}
-	malloc_hook_string_edit(stack[2], 0);
-	malloc_hook_string_edit(stack[3], 1);
+	malloc_hook_string_edit(stack[2]);
+	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
@@ -663,7 +681,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		}
 		while (addr_i < ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
 			addr_i++;
-		if (addr_i == ADDR_ARR_SIZE - 1)
+		if (addr_i == ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
 		{
 			printf(REDB \"(MALLOC_ERROR)\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
 			${AS_OG}free(stack);
@@ -671,7 +689,8 @@ void	*${AS_FUNC}malloc(size_t size)
 		}
 		addresses[addr_i].function = strdup(stack[2]);
 		addresses[addr_i].bytes = size;
-		addresses[addr_i].address = ret;
+		addresses[addr_i].index = malloc_count;
+		addresses[addr_i].address = ret; 
 		printf(REDB \"(MALLOC_WRAPPER %d) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", malloc_count, stack[3], stack[2], size, ret);
 	}
 	else
@@ -698,8 +717,8 @@ void	${AS_FUNC}free(void *tofree)
 		init_run = 0;
 		return ;
 	}
-	malloc_hook_string_edit(stack[2], 0);
-	malloc_hook_string_edit(stack[3], 1);
+	malloc_hook_string_edit(stack[2]);
+	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
 		printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
@@ -714,6 +733,7 @@ void	${AS_FUNC}free(void *tofree)
 					addresses[i].function = 0;
 					addresses[i].bytes = 0;
 					addresses[i].address = 0;
+					addresses[i].index = 0;
 				}
 			}
 		}
@@ -741,6 +761,15 @@ then
 else
 	SRC+="$FILE_PATH"
 fi
+
+printf "$REDB================= memdetect by: ==================
+ _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
+   _|  _|    _|        _|    _|  _|            _|_|_|_|  
+     _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
+   _|  _|    _|        _|    _|  _|    _|  _|    _|      
+ _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|      _|_|
+=======================================================
+$DEF"
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
