@@ -559,7 +559,7 @@ void malloc_hook_report()
 		if (addresses[i].address)
 		{
 			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
-				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, addresses[i].index, tot_leaks++, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
+				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
 			else
 				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
