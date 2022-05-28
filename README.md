@@ -93,6 +93,8 @@ You can either run memdetect on **files** by specifying their name, or with a **
 
  - #### Output:
 
+   - `-o` `--output` filename: Sends all the output without terminal colors to the specified file
+
    - `-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
 
    - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
