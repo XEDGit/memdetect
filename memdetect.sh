@@ -664,6 +664,7 @@ void	*${AS_FUNC}malloc(size_t size)
 	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
+		malloc_count++;
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
 			printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
@@ -671,7 +672,6 @@ void	*${AS_FUNC}malloc(size_t size)
 			init_run = 0;
 			return (0);
 		}
-		malloc_count++;
 		ret = ${AS_OG}malloc(size);
 		addr_i++;
 		if (addr_i == ADDR_ARR_SIZE)
