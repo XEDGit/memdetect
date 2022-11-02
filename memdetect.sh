@@ -10,8 +10,10 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
-FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e" "--exclude" "-ie" "--include-external" "-il" "--include-libs" "-o" "--output" \
-	   "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" "-nr" "--no-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
+FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
+"--exclude" "-ie" "--include-external" "-il" "--include-libs" "-o" "--output"  \
+"-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
+"-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
 
 RE='^[0-9]+$'
 
@@ -43,7 +45,31 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") 
 
 SRC=""
 
-HELP_MSG="Usage: ./memdetect {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+HELP_MSG="Usage: ./memdetect {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+
+function check_update()
+{
+	PATH_TO_BIN=$(which memdetect)
+
+	if [[ $? != 0 ]]
+	then
+		return
+	fi
+
+	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null
+
+	DIFF=$(diff tmp $PATH_TO_BIN)
+
+	if [ "$DIFF" != "" ]
+	then
+		chmod +x tmp
+		mv tmp $PATH_TO_BIN
+		echo "Updated memdetect, relaunch it!"
+		exit 0
+	else
+		rm tmp
+	fi
+}
 
 function loop()
 {
@@ -270,6 +296,8 @@ function check_flag()
 	return 1
 }
 
+check_update
+
 I=0
 
 [[ $ARGS_LEN == 0 ]] && echo "$HELP_MSG" && exit 1
@@ -425,6 +453,10 @@ do
 			NO_REPORT="// "
 		;;
 
+		"-or" | "--only-report")
+			ONLY_REPORT="// "
+		;;
+
 		"-o" | "--output")
 			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
@@ -505,7 +537,7 @@ typedef struct s_addr {
 
 #ifdef __APPLE__
 # define MAC_OS_SYSTEM 1
-#define DYLD_INTERPOSE(_replacment,_replacee) \
+# define DYLD_INTERPOSE(_replacment,_replacee) \
    __attribute__((used)) static struct{ const void* replacment; const void* replacee; } _interpose_##_replacee \
             __attribute__ ((section (\"__DATA,__interpose\"))) = { (const void*)(unsigned long)&_replacment, (const void*)(unsigned long)&_replacee };
 #else
@@ -691,7 +723,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].index = malloc_count;
 		addresses[addr_i].address = ret; 
-		printf(REDB \"(MALLOC_WRAPPER %d) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", malloc_count, stack[3], stack[2], size, ret);
+		${ONLY_REPORT}printf(REDB \"(MALLOC_WRAPPER %d) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", malloc_count, stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -721,7 +753,7 @@ void	${AS_FUNC}free(void *tofree)
 	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
 	{
-		printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
+		${ONLY_REPORT}printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
 		{
 			free_count++;

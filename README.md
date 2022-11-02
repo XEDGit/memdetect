@@ -68,7 +68,7 @@ make mem 1='-fail 2'
 You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
 
 ### Usage:
-    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [optional flags]
+    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [memdetect flags]
 
 ### Flags:
 
@@ -101,6 +101,8 @@ You can either run memdetect on **files** by specifying their name, or with a **
    **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
    - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+
+   - `-or` `--only-report`: Only display the leaks report at the program exit
 
    - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
 
