@@ -58,6 +58,11 @@ function check_update()
 
 	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null
 
+	if [[ $? != 0 ]]
+	then
+		return
+	fi
+
 	DIFF=$(diff tmp $PATH_TO_BIN)
 
 	if [ "$DIFF" != "" ]
