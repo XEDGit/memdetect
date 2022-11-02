@@ -64,7 +64,7 @@ function check_update()
 	then
 		chmod +x tmp
 		mv tmp $PATH_TO_BIN
-		echo "Updated memdetect, relaunch it!"
+		printf "${REDB}Updated memdetect, relaunch it!\n$DEF"
 		exit 0
 	else
 		rm tmp
@@ -794,13 +794,7 @@ else
 	SRC+="$FILE_PATH"
 fi
 
-printf "$REDB================= memdetect by: ==================
- _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|    _|      
-   _|  _|    _|        _|    _|  _|            _|_|_|_|  
-     _|      _|_|_|    _|    _|  _|  _|_|  _|    _|      
-   _|  _|    _|        _|    _|  _|    _|  _|    _|      
- _|      _|  _|_|_|_|  _|_|_|      _|_|_|  _|      _|_|
-=======================================================
+printf "$REDB================= memdetect by XEDGit ==================
 $DEF"
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
