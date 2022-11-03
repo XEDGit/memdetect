@@ -770,7 +770,7 @@ void	${AS_FUNC}free(void *tofree)
 	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $INCL_XMALL)
 	{
-		if (true $EXCLUDE_RES)
+		if (1 $EXCLUDE_RES)
 		${ONLY_REPORT}printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
 		{
