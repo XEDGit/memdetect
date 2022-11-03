@@ -42,7 +42,6 @@ AS_FUNC=""
 AS_OG="og_"
 
 INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") && !strstr(stack[2], \"xrealloc\") && !strstr(stack[1], \"xrealloc\")"
-
 SRC=""
 
 HELP_MSG='
@@ -60,55 +59,54 @@ USAGE:
 All the <gcc flags> will be added to the gcc command in writing order\n
 
 FLAGS:
-	Compiling:
+  Compiling:
 
-		`-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
-		
-		`-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
+	`-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
 
-	Executing:
+	`-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
+
+  Executing:
 	
-		`-a` `--args` arg0 arg1...: Specify arguments to run with the executable
+	`-a` `--args` arg0 arg1...: Specify arguments to run with the executable
 
+  Fail (Use only one):
 
-	Fail (Use only one):
+	`-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-		`-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+	`-fail` all: Adding this flag will fail all the malloc calls
 
-		`-fail` all: Adding this flag will fail all the malloc calls
+	`-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
 
-		`-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
+  Output:
 
-	Output:
+	`-o` `--output` filename: Sends all the output without terminal colors to the specified file
 
-		`-o` `--output` filename: Sends all the output without terminal colors to the specified file
+	`-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
 
-		`-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+	`-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+	**Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
-		`-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
-		**Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
+	`-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
-		`-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+	`-or` `--only-report`: Only display the leaks report at the program exit
 
-		`-or` `--only-report`: Only display the leaks report at the program exit
+	`-nr` `--no-report`: Does not display the leaks report at the program exit
 
-		`-nr` `--no-report`: Does not display the leaks report at the program exit
+	`-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
 
-		`-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
+	`-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
 
-		`-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
+  Output files:
 
-	Output files:
+	`-p` `--preserve`: Adding this flag will mantain the executable output files
 
-		`-p` `--preserve`: Adding this flag will mantain the executable output files
+  Program settings:
 
-	Program settings:
+	`-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
 
-		`-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
-		
-		`-h` `--help`: Display help message
+	`-h` `--help`: Display help message
 	
-		`--add-path`: adds memdetect executable to a $PATH of your choice\n'
+	`--add-path`: adds memdetect executable to a $PATH of your choice\n'
 
 function cleanup()
 {
