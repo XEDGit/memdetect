@@ -45,35 +45,80 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") 
 
 SRC=""
 
-HELP_MSG="Usage: ./memdetect {<file0> [<file1>...] | <directory_path>} [<gcc_flags>] [[-h] | [--add-path] | [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]]\n"
+HELP_MSG='
+MEMDETECT HELPER:
 
-function check_update()
+SYNTAX:
+{} = positional arguments (mandatory)
+[] = optional arguments
+<> = fields to be filled by the user
+OR = only one of the arguments between OR can be specified, otherwise the first one to be specified is considered
+
+USAGE:
+./memdetect {<file0> [<file1>...] OR <directory_path>} [<gcc_flags>] [-h OR --add-path OR [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]
+
+All the <gcc flags> will be added to the gcc command in writing order\n
+
+FLAGS:
+	Compiling:
+
+		`-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
+		
+		`-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
+
+	Executing:
+	
+		`-a` `--args` arg0 arg1...: Specify arguments to run with the executable
+
+
+	Fail (Use only one):
+
+		`-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+
+		`-fail` all: Adding this flag will fail all the malloc calls
+
+		`-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
+
+	Output:
+
+		`-o` `--output` filename: Sends all the output without terminal colors to the specified file
+
+		`-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+
+		`-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+		**Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
+
+		`-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+
+		`-or` `--only-report`: Only display the leaks report at the program exit
+
+		`-nr` `--no-report`: Does not display the leaks report at the program exit
+
+		`-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
+
+		`-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
+
+	Output files:
+
+		`-p` `--preserve`: Adding this flag will mantain the executable output files
+
+	Program settings:
+
+		`-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+		
+		`-h` `--help`: Display help message
+	
+		`--add-path`: adds memdetect executable to a $PATH of your choice\n'
+
+function cleanup()
 {
-	PATH_TO_BIN=$(which memdetect)
+	rm -f "$PROJECT_PATH/fake_malloc.c"
+	
+	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	if [[ $? != 0 ]]
-	then
-		return
-	fi
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
-	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null
-
-	if [[ $? != 0 ]]
-	then
-		return
-	fi
-
-	DIFF=$(diff tmp $PATH_TO_BIN)
-
-	if [ "$DIFF" != "" ]
-	then
-		chmod +x tmp
-		mv tmp $PATH_TO_BIN
-		printf "${REDB}Updated memdetect, relaunch it!\n$DEF"
-		exit 0
-	else
-		rm tmp
-	fi
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
 }
 
 function loop()
@@ -104,12 +149,7 @@ function loop()
 		
 		printf "$REDB%s$DEF\n" "$GCC_CMD"
 		
-		sh -c "$GCC_CMD 2>&1"
-
-		if [[ $? != 0 ]]
-		then
-			continue
-		fi
+		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 		
 		printf "$REDB%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
 		
@@ -117,9 +157,7 @@ function loop()
 
 	done
 
-	rm -f "$PROJECT_PATH/fake_malloc.c"
-
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
+	cleanup
 
 	printf "\nExiting\n"
 
@@ -149,23 +187,13 @@ function loop_osx()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
-
-		if [[ $? != 0 ]]
-		then
-			continue
-		fi
+		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
 		
 		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
 		printf "$REDB%s$DEF\n" "$GCC_CMD"
 		
-		sh -c "$GCC_CMD 2>&1" 
-
-		if [[ $? != 0 ]]
-		then
-			continue
-		fi
+		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
 		printf "${REDB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 		
@@ -173,13 +201,7 @@ function loop_osx()
 
 	done
 
-	rm -f "$PROJECT_PATH/fake_malloc.c"
-	
-	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
-
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
-
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
+	cleanup
 
 	printf "\nExiting\n"
 
@@ -191,60 +213,54 @@ function run()
 	
 	printf "$REDB%s$DEF\n" "$GCC_CMD"
 	
-	sh -c "$GCC_CMD 2>&1" 
-
-	if [[ $? != 0 ]]
-	then
-		rm -f "$PROJECT_PATH/fake_malloc.c"
-		exit 1
-	fi
+	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
 	printf "${RED}%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
-	rm -f "$PROJECT_PATH/fake_malloc.c"
-
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
+	cleanup
 
 }
 
 function run_osx()
 {
-	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
-
-	if [[ $? != 0 ]]
-	then
-		rm -f "$PROJECT_PATH/fake_malloc.c"
-		rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
-		exit 1
-	fi
+	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
 	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
 	printf "$REDB%s$DEF\n" "$GCC_CMD"
 	
-	sh -c "$GCC_CMD 2>&1" 
-
-	if [[ $? != 0 ]]
-	then
-		rm -f "$PROJECT_PATH/fake_malloc.c"
-		rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
-		exit 1
-	fi
+	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
 	printf "${RED}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
-	rm -f "$PROJECT_PATH/fake_malloc.c"
-	
-	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
+	cleanup
+}
 
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
+function check_update()
+{
+	PATH_TO_BIN=$(which memdetect) || return
 
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
+	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null || return
 
+	DIFF=$(diff tmp $PATH_TO_BIN)
+
+	if [ "$DIFF" != "" ]
+	then
+		chmod +x tmp
+		if [ -w "$PATH_TO_BIN" ]
+		then
+			mv tmp $PATH_TO_BIN && printf "${REDB}Updated memdetect, relaunch it!\n$DEF"
+		else
+			(sudo mv tmp $PATH_TO_BIN && printf "${REDB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
+		fi
+		exit 0
+	else
+		rm tmp
+	fi
 }
 
 function add_to_path()
@@ -305,7 +321,7 @@ check_update
 
 I=0
 
-[[ $ARGS_LEN == 0 ]] && echo "$HELP_MSG" && exit 1
+[[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
 
 if ! check_flag "${ARGS[$I]}"
 then
@@ -489,7 +505,7 @@ do
 		;;
 
         "-h" | "--help")
-			echo "$HELP_MSG"
+			printf "$HELP_MSG" | less
             exit
         ;;
 

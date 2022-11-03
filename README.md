@@ -122,7 +122,7 @@ You can either run memdetect on **files** by specifying their name, or with a **
  
    - `--add-path`: adds memdetect executable to a $PATH of your choice
 
-   
+
  All the optional flags will be added to the gcc command in writing order
 
 ### Examples:
