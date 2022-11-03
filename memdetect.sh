@@ -29,8 +29,6 @@ INCL_LIB=0
 
 ADDR_SIZE=10000
 
-EXCLUDE_RES=""
-
 ONLY_SOURCE=1
 
 MALLOC_FAIL_INDEX=0
@@ -245,11 +243,11 @@ function check_update()
 	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null || return
 
 	DIFF=$(diff tmp $PATH_TO_BIN)
-
+	
 	if [ "$DIFF" != "" ]
 	then
 		chmod +x tmp
-		if [ -w "$PATH_TO_BIN" ]
+		if [ -w $(dirname $PATH_TO_BIN) ]
 		then
 			mv tmp $PATH_TO_BIN && printf "${REDB}Updated memdetect, relaunch it!\n$DEF"
 		else
@@ -770,8 +768,9 @@ void	${AS_FUNC}free(void *tofree)
 	}
 	malloc_hook_string_edit(stack[2]);
 	malloc_hook_string_edit(stack[3]);
-	if (stack[2][0] != '?' $EXCLUDE_RES $INCL_XMALL)
+	if (stack[2][0] != '?' $INCL_XMALL)
 	{
+		if (true $EXCLUDE_RES)
 		${ONLY_REPORT}printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
 		if (tofree)
 		{
