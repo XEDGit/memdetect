@@ -13,7 +13,8 @@ ARGS_LEN=${#ARGS[@]}
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
 "--exclude" "-ie" "--include-external" "-il" "--include-libs" "-o" "--output"  \
 "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
-"-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" "-ix" "--include-xmalloc")
+"-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" \
+"-ix" "--include-xmalloc" "-u" "--update")
 
 RE='^[0-9]+$'
 
@@ -99,6 +100,8 @@ FLAGS:
 	`-p` `--preserve`: Adding this flag will mantain the executable output files
 
   Program settings:
+
+	`-u` `--update`: Only works if the executable is into $PATH, updates the executable to the last commit from github
 
 	`-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
 
@@ -313,8 +316,6 @@ function check_flag()
 	return 1
 }
 
-check_update
-
 I=0
 
 [[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
@@ -504,6 +505,10 @@ do
 			printf "$HELP_MSG" | less
             exit
         ;;
+
+		"-u" | "--update")
+			check_update
+		;;
 
 		"--add-path")
 			add_to_path

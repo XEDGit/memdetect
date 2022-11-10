@@ -116,6 +116,8 @@ You can either run memdetect on **files** by specifying their name, or with a **
 
  - #### Program settings:
 
+	 - `-u` `--update`: Only works if the executable is into $PATH, updates the executable to the last commit from github
+
    - `-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
      
    - `-h` `--help`: Display help message
