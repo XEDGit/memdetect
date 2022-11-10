@@ -507,7 +507,9 @@ do
         ;;
 
 		"-u" | "--update")
+			printf "Checking for updates...\n"
 			check_update
+			exit
 		;;
 
 		"--add-path")
