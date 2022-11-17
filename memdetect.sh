@@ -53,7 +53,7 @@ SYNTAX:
 OR = only one of the arguments between OR can be specified, otherwise the first one to be specified is considered
 
 USAGE:
-./memdetect {<file0> [<file1>...] OR <directory_path>} [<gcc_flags>] [-h OR --add-path OR [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]
+./memdetect {<file0> [<file1>...] OR <directory_path>} [<gcc_flags>] [-h OR -u OR --add-path OR [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]
 
 All the <gcc flags> will be added to the gcc command in writing order\n
 
