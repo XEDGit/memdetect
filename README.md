@@ -28,7 +28,7 @@ P.S. It also fails them!
 This program is made by a single shell executable so it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
 
 ```console
-git clone git@github.com:XEDGit/memdetect.git
+git clone https://github.com/XEDGit/memdetect.git
 cd memdetect
 ./memdetect.sh
 ```
