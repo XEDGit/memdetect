@@ -350,7 +350,7 @@ I=0
 
 [[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
 
-! [ -t 1 ] && COL="" && COLB="" && DEF="" 
+! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT=""
 
 if ! check_flag "${ARGS[$I]}"
 then
