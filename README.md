@@ -1,12 +1,9 @@
-# memdetect
-[<img src="https://img.shields.io/badge/Memory management-5805B0?style=for-the-badge&label=Tool&logo=github&logoColor=white" />](https://github.com/XEDGit/memdetect) 
+Memdetect is a cross-platform shell script to compile your C or C++ project with a wrapper of malloc() and free(), which will help you understand your memory-management and find memory leaks.
 
-A shell script to compile your C file or project with a wrapper of malloc() and free(), which will help you understand your memory-management and debug better.
-P.S. It also fails them!
 
-## Info:
+It also fails targeted malloc() calls, for military-grade stability in your program!
 
-### Platforms:
+## Platforms:
 
 [<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=MacOS&logo=apple&logoColor=white" />](https://github.com/XEDGit/memdetect)
 
@@ -14,18 +11,15 @@ P.S. It also fails them!
 
 [<img src="https://img.shields.io/badge/Compatible via WSL-52CF44?style=for-the-badge&label=Windows&logo=windows&logoColor=white" />](https://docs.microsoft.com/en-us/windows/wsl/install)
 
-### Enviroment:
+## Enviroment:
 
 [<img src="https://img.shields.io/badge/GCC-00599C?style=for-the-badge&logo=c&logoColor=white" />](https://github.com/XEDGit/memdetect)
-
-### Output file:
-
-📄 malloc_debug
+[<img src="https://img.shields.io/badge/C++-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" />](https://github.com/XEDGit/memdetect)
 
 ## Setup:
 
 ### Installation:
-This program is made by a single shell executable so it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
+This program is made by a single shell executable, consequently it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
 
 ```console
 git clone https://github.com/XEDGit/memdetect.git
@@ -65,62 +59,67 @@ make mem 1='-fail 2'
 
 ## Run:
 
-You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
+Memdetect runs standard in **C mode**, to enable **C++ mode** use the `-+` flag
+
+
+You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c or .cpp file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
 
 ### Usage:
-    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<gcc_flags>] [memdetect flags]
+    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<compiler_flags>] [memdetect flags]
 
 ### Flags:
 
  - #### Compiling:
 
-   - `-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
+   - `-fl | --flags <flag0 ... flagn>`: Another way to specify flags to use when compiling with gcc
    
-   - `-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
+   - `-e | --exclude <folder name>`: Specify a folder inside the `directorypath` which gets excluded from compiling
 
  - #### Executing:
    
-   - `-a` `--args` arg0 arg1...: Specify arguments to run with the executable
+   - `-a | --args <arg0> ... <argn>`: Specify arguments to run with the executable
 
 
- - #### Fail (Use only one):
+ - #### Fail malloc (Use one per command):
 
-   - `-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+   - `-fail <number>`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-   - `-fail` all: Adding this flag will fail all the malloc calls
+   - `-fail <all>`: Adding this flag will fail all the malloc calls
 
-   - `-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
+   - `-fail <loop> <start from>`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start from` malloc and continue. **This flag is really useful for debugging**
 
- - #### Output:
+ - #### Output manipulation:
 
-   - `-o` `--output` filename: Sends all the output without terminal colors to the specified file
+   - `-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-   - `-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+   - `-il | --include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
 
-   - `-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+   - `-ie | --include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
    **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
-   - `-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+   - `-ix | --include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
-   - `-or` `--only-report`: Only display the leaks report at the program exit
+   - `-or | --only-report`: Only display the leaks report at the program exit
 
-   - `-nr` `--no-report`: Doesn't display the leaks report at the program exit
+   - `-nr | --no-report`: Doesn't display the leaks report at the program exit
 
-   - `-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
+   - `-fi | --filter-in <arg0> ... <argn>`: Show only results from memdetect output if substring `<arg>` is found inside the output line
 
-   - `-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
+   - `-fo | --filter-out <arg0> ... <argn>`: Filter out results from memdetect output if substring `arg` is found inside the output line
 
  - #### Output files:
 
-   - `-p` `--preserve`: Adding this flag will mantain the executable output files
+   - `-p | --preserve`: Adding this flag will mantain the executable output files
 
  - #### Program settings:
 
-	 - `-u` `--update`: Only works if the executable is into $PATH, updates the executable to the last commit from github
+    - `-+ | -++`: Use to run in C++ mode
 
-   - `-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+	- `-u | --update`: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
+
+   - `-lb | --leaks-buff <size>`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
      
-   - `-h` `--help`: Display help message
+   - `-h | --help`: Display help message
  
    - `--add-path`: adds memdetect executable to a $PATH of your choice
 
@@ -139,7 +138,7 @@ You can either run memdetect on **files** by specifying their name, or with a **
 
 #### Run with project folder
 
-    ./memdetect.sh ..
+    ./memdetect.sh .
 
 #### Run with options
 
@@ -161,10 +160,12 @@ You can either run memdetect on **files** by specifying their name, or with a **
  - `(MALLOC_ERROR)`:
     - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
 
-After your program exits a leak report will be printed. 
+After your program exits a **leaks report** will be printed. 
 
-**⚠️WARNING:  
-if you use exit() all the addresses which have a reference stored in the stack gets freed automatically, but the report will still include them**
+### **WARNINGS ⚠️**:  
+   - The report will still include the leaks freed by exit()
+
+   - There's no wrapper for calloc and realloc functions
 
 ### Example:
 

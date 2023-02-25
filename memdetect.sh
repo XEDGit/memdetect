@@ -1,8 +1,10 @@
 #!/bin/bash
 
-RED="\e[31m"
+COL="\e[34m"
 
-REDB="\e[1;31m"
+COLB="\e[1;34m"
+
+FAINT="\e[2;37m"
 
 DEF="\e[0m"
 
@@ -10,11 +12,15 @@ ARGS=("$@")
 
 ARGS_LEN=${#ARGS[@]}
 
+EXTENSION=c
+
+COMPILER=gcc
+
 FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
-"--exclude" "-ie" "--include-external" "-il" "--include-libs" "-o" "--output"  \
+"--exclude" "-ie" "--include-external" "-il" "--include-libs" "--output"  \
 "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
 "-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" \
-"-ix" "--include-xmalloc" "-u" "--update")
+"-ix" "--include-xmalloc" "-u" "--update" "-+" "-++")
 
 RE='^[0-9]+$'
 
@@ -44,7 +50,7 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") 
 SRC=""
 
 HELP_MSG='
-MEMDETECT HELPER:
+~~ MEMDETECT HELPER: ~~
 
 SYNTAX:
 {} = positional arguments (mandatory)
@@ -56,64 +62,71 @@ USAGE:
 ./memdetect {<file0> [<file1>...] OR <directory_path>} [<gcc_flags>] [-h OR -u OR --add-path OR [-nr] [-or] [-ie] [-ix] [-p] [-fail <to_fail>] [-e <folder_to_exclude>] [-lb <size>] [-fi <filter0> [<filter1...>]] [-fl <gcc_flag0> [<gcc_flag1>...]] [-a <out_arg0> [<out_arg1>...]]
 
 All the <gcc flags> will be added to the gcc command in writing order\n
+Flags:
 
-FLAGS:
-  Compiling:
+	Compiling:
 
-	`-fl` `--flags` flag0 flag1...: Another way to specify flags to use when compiling with gcc
+		`-fl | --flags <flag0 ... flagn>`: Another way to specify flags to use when compiling with gcc
+   
+		`-e | --exclude <folder name>`: Specify a folder inside the `directorypath` which gets excluded from compiling
 
-	`-e` `--exclude` folder_name: Specify a folder inside the `directory_path` which gets excluded from compiling
+	Executing:
+   
+		`-a | --args <arg0> ... <argn>`: Specify arguments to run with the executable
 
-  Executing:
-	
-	`-a` `--args` arg0 arg1...: Specify arguments to run with the executable
 
-  Fail (Use only one):
+	Fail malloc (Use one per command):
 
-	`-fail` number: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+		`-fail <number>`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-	`-fail` all: Adding this flag will fail all the malloc calls
+		`-fail <all>`: Adding this flag will fail all the malloc calls
 
-	`-fail` loop start_from: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start_from` malloc and continue. **This flag is really useful for debugging**
+		`-fail <loop> <start from>`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start from` malloc and continue. **This flag is really useful for debugging**
 
-  Output:
+	Output manipulation:
 
-	`-o` `--output` filename: Sends all the output without terminal colors to the specified file
+		`-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-	`-il` `--include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+		`-il | --include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
 
-	`-ie` `--include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
-	**Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
+		`-ie | --include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+   **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
-	`-ix` `--include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+		`-ix | --include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
-	`-or` `--only-report`: Only display the leaks report at the program exit
+		`-or | --only-report`: Only display the leaks report at the program exit
 
-	`-nr` `--no-report`: Does not display the leaks report at the program exit
+		`-nr | --no-report`: Does not display the leaks report at the program exit
 
-	`-fi` `--filter-in` arg0 arg1...: Show only results from memdetect output if substring `arg` is found inside the output line
+		`-fi | --filter-in <arg0> ... <argn>`: Show only results from memdetect output if substring `<arg>` is found inside the output line
 
-	`-fo` `--filter-out` arg0 arg1...: Filter out results from memdetect output if substring `arg` is found inside the output line
+		`-fo | --filter-out <arg0> ... <argn>`: Filter out results from memdetect output if substring `arg` is found inside the output line
 
-  Output files:
+	Output files:
 
-	`-p` `--preserve`: Adding this flag will mantain the executable output files
+		`-p | --preserve`: Adding this flag will mantain the executable output files
 
-  Program settings:
+	Program settings:
 
-	`-u` `--update`: Only works if the executable is into $PATH, updates the executable to the last commit from github
+ 		`-+ | -++`: Use to run in C++ mode
 
-	`-lb` `--leaks-buff` size: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to)
+		`-u | --update`: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
 
-	`-h` `--help`: Display help message
-	
-	`--add-path`: adds memdetect executable to a $PATH of your choice\n'
+		`-lb | --leaks-buff <size>`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
+     
+		`-h | --help`: Display help message
+ 
+		`--add-path`: adds memdetect executable to a $PATH of your choice
+
+'
 
 function cleanup()
 {
 	rm -f "$PROJECT_PATH/fake_malloc.c"
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
+
+	rm -f "$PROJECT_PATH/fake_malloc_destructor.o"
 
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
@@ -126,6 +139,8 @@ function loop()
 	(( COUNTER = COUNTER - 1 ))
 	
 	CONTINUE=""
+
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c
 	
 	while [[ $COUNTER -ge 0 ]]
 	do
@@ -144,13 +159,13 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
+		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
 		
-		printf "$REDB%s$DEF\n" "$GCC_CMD"
+		printf "$COLB%s$DEF\n" "$GCC_CMD"
 		
 		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 		
-		printf "$REDB%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
+		printf "$COLB%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
 		
 		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -188,13 +203,15 @@ function loop_osx()
 		
 		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
 		
-		GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
+		gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c
+
+		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
-		printf "$REDB%s$DEF\n" "$GCC_CMD"
+		printf "$COLB%s$DEF\n" "$GCC_CMD"
 		
 		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
-		printf "${REDB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
+		printf "${COLB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 		
 		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -208,13 +225,16 @@ function loop_osx()
 
 function run()
 {
-	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
+
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c
+
+	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 	
-	printf "$REDB%s$DEF\n" "$GCC_CMD"
+	printf "$COLB%s$DEF\n" "$GCC_CMD"
 	
 	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
-	printf "${RED}%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS"
+	printf "${COL}%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -226,13 +246,15 @@ function run_osx()
 {
 	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
-	GCC_CMD="gcc $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
+	gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c
+
+	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
-	printf "$REDB%s$DEF\n" "$GCC_CMD"
+	printf "$COLB%s$DEF\n" "$GCC_CMD"
 	
 	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
-	printf "${RED}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
+	printf "${COL}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -252,9 +274,9 @@ function check_update()
 		chmod +x tmp
 		if [ -w $(dirname $PATH_TO_BIN) ]
 		then
-			mv tmp $PATH_TO_BIN && printf "${REDB}Updated memdetect, relaunch it!\n$DEF"
+			mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF"
 		else
-			(sudo mv tmp $PATH_TO_BIN && printf "${REDB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
+			(sudo mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
 		fi
 		exit 0
 	else
@@ -296,7 +318,7 @@ function add_to_path()
 
 	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
 
-	printf "${REDB}Adding memdetect to $PATH_CHOICE${DEF}\n"
+	printf "${COLB}Adding memdetect to $PATH_CHOICE${DEF}\n"
 	
 	if [ -w "$PATH_CHOICE" ]
 	then
@@ -321,7 +343,7 @@ I=0
 
 [[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
 
-! [ -t 1 ] && RED="" && REDB="" && DEF="" 
+! [ -t 1 ] && COL="" && COLB="" && DEF="" 
 
 if ! check_flag "${ARGS[$I]}"
 then
@@ -442,6 +464,12 @@ do
 			fi
 		;;
 
+		"-+" | "-++")
+			EXTENSION=cpp
+			COMPILER=c++
+			ONLY_REPORT="// "
+		;;
+
         "-fl" | "--flags")
 			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
@@ -478,7 +506,7 @@ do
 			ONLY_REPORT="// "
 		;;
 
-		"-o" | "--output")
+		"--output")
 			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			(( I = I + 1 ))
 			if [ -f "${ARGS[$I]}" ]
@@ -499,8 +527,8 @@ do
 			echo "Output file ready!"
 			exec 1>"${ARGS[$I]}"
 			exec 2>&1
-			REDB=""
-			RED=""
+			COLB=""
+			COL=""
 			DEF=""
 		;;
 
@@ -523,7 +551,7 @@ do
     (( I = I + 1 ))
 done
 
-{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Error: Missing path to project or file list.\n%s" "$HELP_MSG" && exit 1
+{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Error: Missing path to project or file list.\n" && exit 1
 
 { [ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]; } && echo "Error: $PROJECT_PATH is not a folder" && exit 1
 
@@ -534,10 +562,10 @@ then
 	AS_OG=""
 	echo "extern void __attribute__((destructor)) malloc_hook_report();
 extern void __attribute__((constructor)) malloc_hook_pid_detect();" > $PROJECT_PATH/fake_malloc_destructor.c
-	[ -n "$FILE_PATH" ] && SRC+="$PROJECT_PATH/fake_malloc_destructor.c "
-elif [ -n "$FILE_PATH" ]
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && SRC+="$PROJECT_PATH/fake_malloc_destructor.o "
+elif ([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ])
 then
-	SRC+="$PROJECT_PATH/fake_malloc.c "
+	SRC+="$PROJECT_PATH/fake_malloc.o "
 fi
 
 eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
@@ -549,9 +577,11 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <unistd.h>
 #include <stdlib.h>
 
-#define RED \"$RED\"
+#define COL \"$COL\"
 
-#define REDB \"$REDB\"
+#define COLB \"$COLB\"
+
+#define FAINT \"$FAINT\"
 
 #define DEF \"$DEF\"
 
@@ -610,7 +640,7 @@ void malloc_hook_report()
 		return ;
 	tot_leaks = 0;
 	init_run = 1;
-	printf(REDB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: \" RED \"%d\" DEF \"\n\tFree calls: \" RED \"%d\" DEF \"\n\tFree calls to 0x0: \" RED \"%d\" DEF \"\n\" REDB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
+	printf(COLB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: \" COL \"%d\" DEF \"\n\tFree calls: \" COL \"%d\" DEF \"\n\tFree calls to 0x0: \" COL \"%d\" DEF \"\n\" COLB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = ADDR_ARR_SIZE - 1;
 	for (int i = 0; i <= addr_i; i++)
@@ -618,13 +648,13 @@ void malloc_hook_report()
 		if (addresses[i].address)
 		{
 			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
-				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p\" DEF \"	Content: \" RED \"\\\"%s\\\"\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
+				printf(COLB \"%d)\" DEF \"\tFrom \" COLB \"(M_W %d) %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p\" DEF \"	Content: \" COL \"\\\"%s\\\"\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
 			else
-				printf(REDB \"%d)\" DEF \"\tFrom \" REDB \"(M_W %d) %s\" DEF \" of size \" RED \"%d\" DEF \" at address \"RED \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
+				printf(COLB \"%d)\" DEF \"\tFrom \" COLB \"(M_W %d) %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
 		}
 	}
-	printf(REDB \"Total leaks: %d\nWARNING:\" DEF \" the leaks freed by exit() are still displayed in the report\n\" DEF, tot_leaks);
+	printf(COLB \"Total leaks: %d\nWARNING:\" DEF \" the leaks freed by exit() are still displayed in the report\n\" DEF, tot_leaks);
 }
 
 ${AS_COMM}int init_malloc_hook()
@@ -726,7 +756,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		malloc_count++;
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			printf(REDB \"(MALLOC_FAIL)\t\" DEF \" %s -> %s malloc num %d failed\n\", stack[3], stack[2], malloc_fail);
+			printf(COLB \"(MALLOC_FAIL)\t %s -> %s malloc num %d failed\n\" DEF, stack[3], stack[2], malloc_fail);
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
@@ -742,7 +772,7 @@ void	*${AS_FUNC}malloc(size_t size)
 			addr_i++;
 		if (addr_i == ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
 		{
-			printf(REDB \"(MALLOC_ERROR)\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
+			printf(COLB \"(MALLOC_ERROR)\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
 			${AS_OG}free(stack);
 			exit (1);
 		}
@@ -750,7 +780,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].index = malloc_count;
 		addresses[addr_i].address = ret; 
-		${ONLY_REPORT}printf(REDB \"(MALLOC_WRAPPER %d) \" DEF \"%s -> %s allocated %zu bytes at %p\n\", malloc_count, stack[3], stack[2], size, ret);
+		${ONLY_REPORT}printf(COLB \"(MALLOC_WRAPPER %d) \" FAINT \"%s -> %s allocated %zu bytes at %p\" DEF \"\n\", malloc_count, stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -780,8 +810,8 @@ void	${AS_FUNC}free(void *tofree)
 	malloc_hook_string_edit(stack[3]);
 	if (stack[2][0] != '?' $INCL_XMALL)
 	{
-		if (1 $EXCLUDE_RES)
-		${ONLY_REPORT}printf(REDB \"(FREE_WRAPPER)\t\" DEF \" %s -> %s free %p\n\", stack[3], stack[2], tofree);
+		${ONLY_REPORT}if (1 $EXCLUDE_RES)
+		${ONLY_REPORT}printf(COLB \"(FREE_WRAPPER)\t\" FAINT \" %s -> %s free %p\" DEF \"\n\" , stack[3], stack[2], tofree);
 		if (tofree)
 		{
 			free_count++;
@@ -798,7 +828,9 @@ void	${AS_FUNC}free(void *tofree)
 			}
 		}
 		else
+		{
 			zero_free_count++;
+		}
 	}
 	init_run = 0;
 	${AS_OG}free(stack);
@@ -814,15 +846,15 @@ if [ -z "$FILE_PATH" ]
 then
 	if [[ "$OSTYPE" == "darwin"* ]]
 	then
-		SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
+		SRC+=$(eval "find $PROJECT_PATH -name '*.$EXTENSION' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
 	else
-		 SRC+=$(eval "find $PROJECT_PATH -name '*.c' $EXCLUDE_FIND" | tr '\n' ' ')
+		SRC+=$(eval "find $PROJECT_PATH -name '*.$EXTENSION' $EXCLUDE_FIND" | tr '\n' ' ')
 	fi
 else
 	SRC+="$FILE_PATH"
 fi
 
-printf "$REDB================= memdetect by XEDGit ==================
+printf "$COLB================= memdetect by XEDGit ==================
 $DEF"
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
