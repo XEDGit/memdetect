@@ -139,6 +139,8 @@ function loop()
 	(( COUNTER = COUNTER - 1 ))
 	
 	CONTINUE=""
+	
+	gcc fake_malloc.c -c -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl
 
 	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c
 	
@@ -159,7 +161,7 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER$GCC_FLAGS -ldl"
+		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug"
 		
 		printf "$COLB%s$DEF\n" "$GCC_CMD"
 		
@@ -226,9 +228,9 @@ function loop_osx()
 function run()
 {
 
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
-	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
+	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
 	printf "$COLB%s$DEF\n" "$GCC_CMD"
 	
