@@ -163,6 +163,8 @@ function loop()
 		
 		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug"
 		
+		[ "$EXTENSION" == "cpp" ] && GCC_CMD+=" -ldl"
+
 		printf "$COLB%s$DEF\n" "$GCC_CMD"
 		
 		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
@@ -231,6 +233,8 @@ function run()
 	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
 	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
+
+	[ "$EXTENSION" == "cpp" ] && GCC_CMD+=" -ldl"
 	
 	printf "$COLB%s$DEF\n" "$GCC_CMD"
 	
