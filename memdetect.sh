@@ -123,6 +123,8 @@ Flags:
 function cleanup()
 {
 	rm -f "$PROJECT_PATH/fake_malloc.c"
+
+	rm -f "$PROJECT_PATH/fake_malloc.o"
 	
 	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
@@ -141,7 +143,7 @@ function loop()
 	CONTINUE=""
 	
 
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -o "$PROJECT_PATH/fake_malloc.o"
 	
 	while [[ $COUNTER -ge 0 ]]
 	do
@@ -160,7 +162,7 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		gcc fake_malloc.c -c -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
+		gcc fake_malloc.c -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
 		
 		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=${COUNTER}$GCC_FLAGS"
 		
@@ -208,7 +210,7 @@ function loop_osx()
 		
 		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
 		
-		gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c
+		gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH/fake_malloc_destructor.o"
 
 		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
@@ -231,7 +233,7 @@ function loop_osx()
 function run()
 {
 
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
 	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 
@@ -253,7 +255,7 @@ function run_osx()
 {
 	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
-	gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c
+	gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc_destructor.o
 
 	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
