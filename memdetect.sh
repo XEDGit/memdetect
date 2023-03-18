@@ -289,7 +289,7 @@ function check_update()
 		fi
 		exit 0
 	else
-		printf "No update found."
+		printf "No update found.\n"
 		rm tmp
 	fi
 }
