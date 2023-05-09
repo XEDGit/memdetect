@@ -476,7 +476,6 @@ do
 		"-+" | "-++")
 			EXTENSION=cpp
 			COMPILER=c++
-			ONLY_REPORT="// "
 		;;
 
         "-fl" | "--flags")
