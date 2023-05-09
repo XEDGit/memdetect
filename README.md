@@ -1,4 +1,4 @@
-Memdetect is a cross-platform shell script to compile your C or C++ project with a wrapper of malloc() and free(), which will help you understand your memory-management and find memory leaks.
+Memdetect is a cross-platform shell script to compile and run your C or C++ project with a wrapper of malloc() and free(), which will help you understand your memory-management and find memory leaks.
 
 
 It also fails targeted malloc() calls, for military-grade stability in your program!
@@ -19,7 +19,7 @@ It also fails targeted malloc() calls, for military-grade stability in your prog
 ## Setup:
 
 ### Installation:
-This program is made by a single shell executable, consequently it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
+This program is made by a single shell executable, so it doesn't need proper installation, to be able to run it just clone this repository and you're ready to test
 
 ```console
 git clone https://github.com/XEDGit/memdetect.git
