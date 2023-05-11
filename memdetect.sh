@@ -4,6 +4,8 @@ COL="\e[34m"
 
 COLB="\e[1;34m"
 
+ERR="\e[1;31m"
+
 FAINT="\e[2;37m"
 
 DEF="\e[0m"
@@ -253,7 +255,7 @@ function run()
 
 function run_osx()
 {
-	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
+	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -g -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
 	gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc_destructor.o
 
@@ -289,7 +291,7 @@ function check_update()
 		fi
 		exit 0
 	else
-		printf "No update found.\n"
+		printf "No update found."
 		rm tmp
 	fi
 }
@@ -351,8 +353,6 @@ function check_flag()
 I=0
 
 [[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
-
-! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT=""
 
 if ! check_flag "${ARGS[$I]}"
 then
@@ -476,6 +476,7 @@ do
 		"-+" | "-++")
 			EXTENSION=cpp
 			COMPILER=c++
+			ONLY_REPORT="// "
 		;;
 
         "-fl" | "--flags")
@@ -530,14 +531,10 @@ do
 					exit 1
 				fi
 			fi
-			touch "${ARGS[$I]}"
-			[ ! -f "${ARGS[$I]}" ] && printf "Failed creating output file\n" && exit 1
+			touch "${ARGS[$I]}" || (printf "Failed creating output file\n" && exit 1)
 			echo "Output file ready!"
 			exec 1>"${ARGS[$I]}"
 			exec 2>&1
-			COLB=""
-			COL=""
-			DEF=""
 		;;
 
         "-h" | "--help")
@@ -558,6 +555,8 @@ do
     esac
     (( I = I + 1 ))
 done
+
+! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR=""
 
 { [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Error: Missing path to project or file list.\n" && exit 1
 
@@ -584,6 +583,7 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #define COL \"$COL\"
 
@@ -592,6 +592,8 @@ eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #define FAINT \"$FAINT\"
 
 #define DEF \"$DEF\"
+
+#define ERR \"$ERR\"
 
 typedef struct s_addr {
 	void	*address;
@@ -623,8 +625,17 @@ static pid_t	parent_pid = 0;
 ${NO_REPORT}void __attribute__((constructor)) malloc_hook_pid_detect();
 ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
 
+void malloc_hook_handle_signals(int sig)
+{
+	printf( ERR \"Received signal %s\n\" DEF, sys_signame[sig]);
+	exit(1);
+}
+
 void malloc_hook_pid_detect()
 {
+	signal(SIGSEGV, malloc_hook_handle_signals);
+	signal(SIGABRT, malloc_hook_handle_signals);
+	signal(SIGBUS, malloc_hook_handle_signals);
 	init_run = 1;
 	if (!parent_pid)
 		parent_pid = getpid();
@@ -667,11 +678,14 @@ void malloc_hook_report()
 
 ${AS_COMM}int init_malloc_hook()
 ${AS_COMM}{
+${AS_COMM}	signal(SIGSEGV, malloc_hook_handle_signals);
+${AS_COMM}	signal(SIGABRT, malloc_hook_handle_signals);
+${AS_COMM}	signal(SIGBUS, malloc_hook_handle_signals);
 ${AS_COMM}	og_malloc = dlsym(RTLD_NEXT, \"malloc\");
-${AS_COMM}    og_free = dlsym(RTLD_NEXT, \"free\");
+${AS_COMM}	og_free = dlsym(RTLD_NEXT, \"free\");
 
-${AS_COMM}    if (!og_malloc || !og_free)
-${AS_COMM}        exit(1);
+${AS_COMM}	if (!og_malloc || !og_free)
+${AS_COMM}		exit(1);
 ${AS_COMM}	return (0);
 ${AS_COMM}}
 
@@ -751,7 +765,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		return (${AS_OG}malloc(size));
 	init_run = 1;
 	stack_size = malloc_hook_backtrace_readable(&stack);
-	if (ONLY_SOURCE && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
+	if (ONLY_SOURCE && stack_size > 4 && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
 	{
 		${AS_OG}free(stack);
 		init_run = 0;
@@ -807,8 +821,8 @@ void	${AS_FUNC}free(void *tofree)
 		return ;
 	}
 	init_run = 1;
-	malloc_hook_backtrace_readable(&stack);
-	if (ONLY_SOURCE && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
+	int stack_size = malloc_hook_backtrace_readable(&stack);
+	if (ONLY_SOURCE && stack_size > 4 && !(strstr(stack[2], \"malloc_debug\") || strstr(stack[3], \"malloc_debug\") || strstr(stack[4], \"malloc_debug\")))
 	{
 		${AS_OG}free(stack);
 		init_run = 0;
@@ -864,6 +878,7 @@ fi
 
 printf "$COLB================= memdetect by XEDGit ==================
 $DEF"
+
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
