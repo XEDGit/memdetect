@@ -627,7 +627,7 @@ ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_handle_signals(int sig)
 {
-	printf( ERR \"Received signal %s\n\" DEF, sys_signame[sig]);
+	printf( ERR \"Received signal %s\n\" DEF, strsignal[sig]);
 	exit(1);
 }
 
