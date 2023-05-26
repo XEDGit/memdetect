@@ -22,7 +22,7 @@ FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
 "--exclude" "-ie" "--include-external" "-il" "--include-libs" "--output"  \
 "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
 "-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" \
-"-ix" "--include-xmalloc" "-u" "--update" "-+" "-++")
+"-ix" "--include-xmalloc" "-u" "--update" "-+" "-++" "-cl" "--clean")
 
 RE='^[0-9]+$'
 
@@ -68,69 +68,70 @@ Flags:
 
 	Compiling:
 
-		`-fl | --flags <flag0 ... flagn>`: Another way to specify flags to use when compiling with gcc
+		-fl OR --flags <flag0 ... flagn>: Another way to specify flags to use when compiling with gcc
    
-		`-e | --exclude <folder name>`: Specify a folder inside the `directorypath` which gets excluded from compiling
+		-e OR --exclude <folder name>: Specify a folder inside the <directory path> to exclude from compiling
 
 	Executing:
    
-		`-a | --args <arg0> ... <argn>`: Specify arguments to run with the executable
+		-a OR --args <arg0> ... <argn>: Specify arguments to run with the executable
 
 
 	Fail malloc (Use one per command):
 
-		`-fail <number>`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+		-fail <number>: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-		`-fail <all>`: Adding this flag will fail all the malloc calls
+		-fail <all>: Adding this flag will fail all the malloc calls
 
-		`-fail <loop> <start from>`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start from` malloc and continue. **This flag is really useful for debugging**
+		-fail loop [<N>]: Your code will be compiled and ran in a loop, failing the Nth malloc call on the 1st execution, the N+1th on the 2nd execution and so on. It will start by failing Nth malloc and continue. **This flag is really useful for debugging**
 
 	Output manipulation:
 
-		`-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
+		-o OR --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-		`-il | --include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+		-il OR --include-lib: Adding this flag will include in the output the library name from where the first shown function have been called
 
-		`-ie | --include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
-   **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
+		-ie OR --include-ext: Adding this flag will include in the output the calls to malloc and free from outside your source files. Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
 
-		`-ix | --include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+		-ix OR --include-xmalloc: Adding this flag will include in the output the calls to xmalloc and xrealloc
 
-		`-or | --only-report`: Only display the leaks report at the program exit
+		-or OR --only-report: Only display the leaks report at the program exit
 
-		`-nr | --no-report`: Does not display the leaks report at the program exit
+		-nr OR --no-report: Does not display the leaks report at the program exit
 
-		`-fi | --filter-in <arg0> ... <argn>`: Show only results from memdetect output if substring `<arg>` is found inside the output line
+		-fi OR --filter-in <arg0 ... argn>: Show only results from memdetect output if substring <arg> is found inside the output line
 
-		`-fo | --filter-out <arg0> ... <argn>`: Filter out results from memdetect output if substring `arg` is found inside the output line
+		-fo OR --filter-out <arg0 ... argn>: Filter out results from memdetect output if substring <arg> is found inside the output line
 
 	Output files:
 
-		`-p | --preserve`: Adding this flag will mantain the executable output files
+		-p OR --preserve: Adding this flag will mantain source and object files from memdetect execution 
 
 	Program settings:
 
- 		`-+ | -++`: Use to run in C++ mode
+ 		-+ OR -++: Use to run in C++ mode
 
-		`-u | --update`: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
+		-u OR --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
 
-		`-lb | --leaks-buff <size>`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
+		-lb OR --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
      
-		`-h | --help`: Display help message
+		-h OR --help: Display this help message
+
+		-cl OR --clean: Clean files left by -p or --preserve flag 
  
-		`--add-path`: adds memdetect executable to a $PATH of your choice
+		--add-path: adds memdetect executable to a $PATH of your choice
 
 '
 
 function cleanup()
 {
-	rm -f "$PROJECT_PATH/fake_malloc.c"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.c"
 
-	rm -f "$PROJECT_PATH/fake_malloc.o"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.o"
 	
-	rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	rm -f "$PROJECT_PATH/fake_malloc_destructor.o"
+	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc_destructor.o"
 
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
@@ -143,10 +144,7 @@ function loop()
 	(( COUNTER = COUNTER - 1 ))
 	
 	CONTINUE=""
-	
 
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -o "$PROJECT_PATH/fake_malloc.o"
-	
 	while [[ $COUNTER -ge 0 ]]
 	do
 		
@@ -158,13 +156,16 @@ function loop()
 
 		read -rn1 CONTINUE
 		
+
 		stty -raw echo
 
-		{ [ "$CONTINUE" == "q" ] || [ "$CONTINUE" = $'\e' ]; } && break
+		[ "$CONTINUE" == "q" ] && break
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
-		
-		gcc fake_malloc.c -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
+
+		[ "$CONTINUE" = $'\e' ] && read -rn2 CONTINUE
+
+		gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
 		
 		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=${COUNTER}$GCC_FLAGS"
 		
@@ -234,8 +235,7 @@ function loop_osx()
 
 function run()
 {
-
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c fake_malloc.c -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c "$PROJECT_PATH/fake_malloc.c" -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
 	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
 
@@ -447,6 +447,12 @@ do
 			PRESERVE=1
 		;;
 
+		"-cl" | "--clean")
+			unset PRESERVE
+			cleanup
+			exit 0
+		;;
+
 		"-fail")
 			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
@@ -476,7 +482,6 @@ do
 		"-+" | "-++")
 			EXTENSION=cpp
 			COMPILER=c++
-			ONLY_REPORT="// "
 		;;
 
         "-fl" | "--flags")
