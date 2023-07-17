@@ -26,7 +26,7 @@ FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
 
 RE='^[0-9]+$'
 
-EXCLUDE_FIND="! -path '*memdetect*' "
+EXCLUDE_FIND=""
 
 EXCLUDE_RES=""
 
