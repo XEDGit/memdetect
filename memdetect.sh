@@ -18,11 +18,12 @@ EXTENSION=c
 
 COMPILER=gcc
 
-FLAGS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
+OPTIONS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
 "--exclude" "-ie" "--include-external" "-il" "--include-libs" "--output"  \
 "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
 "-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" \
-"-ix" "--include-xmalloc" "-u" "--update" "-+" "-++" "-cl" "--clean")
+"-ix" "--include-xmalloc" "-u" "--update" "-+" "-++" "-cl" "--clean" \
+"-n" "--dry-run" "-m" "--make-rule")
 
 RE='^[0-9]+$'
 
@@ -39,6 +40,8 @@ INCL_LIB=0
 ADDR_SIZE=10000
 
 ONLY_SOURCE=1
+
+MAKE_RULE="all"
 
 MALLOC_FAIL_INDEX=0
 
@@ -125,6 +128,13 @@ Flags:
 
 function cleanup()
 {
+	while read -rs -t 0
+	do
+		read -rsn1
+	done
+
+	[ "$DRY_RUN" = "y" ] && exit 0
+
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.c"
 
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.o"
@@ -150,34 +160,43 @@ function loop()
 		
 		(( COUNTER = COUNTER + 1 ))
 		
-		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
+		printf "\e[1mPress any key to run failing malloc number %s (-fail %s) or 'q' to quit:$DEF" "$COUNTER" "$COUNTER"
 		
-		stty raw -echo
-
-		read -rn1 CONTINUE
+		read -srn1 CONTINUE
 		
-
-		stty -raw echo
-
 		[ "$CONTINUE" == "q" ] && break
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 
 		[ "$CONTINUE" = $'\e' ] && read -rn2 CONTINUE
 
-		gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
+		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
 		
-		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=${COUNTER}$GCC_FLAGS"
-		
-		[ "$EXTENSION" == "cpp" ] && GCC_CMD+=" -ldl"
+		if [ "$MAKEFILE_SUCCESS" = "y" ]
+		then
+			for cmd in "${MAKEFILE_CMDS[@]}"
+			do
+				if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
+				then
+					GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
+					printf "$COLB%s$DEF\n" "$GCC_CMD"
+					[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+				else
+					printf "$COLB%s$DEF\n" "$cmd"
+					[ "$DRY_RUN" != "y" ] && $cmd
+				fi
+			done
+		else
+			GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl"
 
-		printf "$COLB%s$DEF\n" "$GCC_CMD"
-		
-		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+			printf "$COLB%s$DEF\n" "$GCC_CMD"
+			
+			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+		fi
 		
 		printf "$COLB%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS" 
 		
-		sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
+		[ "$DRY_RUN" != "y" ] && bash -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	done
 
@@ -199,31 +218,33 @@ function loop_osx()
 		
 		(( COUNTER = COUNTER + 1 ))
 		
-		printf "\e[1mPress any key to run with -fail %s or 'q' to quit:$DEF" "$COUNTER"
-		
-		stty raw -echo
+		printf "\e[1mPress any key to run failing malloc number %s (-fail %s) or 'q' to quit:$DEF" "$COUNTER" "$COUNTER"
 
-		read -rn1 CONTINUE
-		
-		stty -raw echo
+		read -srn1 CONTINUE
 
-		{ [ "$CONTINUE" == "q" ] || [ "$CONTINUE" = $'\e' ]; } && break
+		{ [ "$CONTINUE" = "q" ] || [ "$CONTINUE" = $'\e' ]; } && break
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
+		[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
 		
-		gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH/fake_malloc_destructor.o"
+		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH/fake_malloc_destructor.o"
 
 		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 		
 		printf "$COLB%s$DEF\n" "$GCC_CMD"
 		
-		sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+
+		if ! [[ $? -eq 0 ]]
+		then
+			cleanup
+			exit
+		fi
 
 		printf "${COLB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 		
-		sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
+		[ "$DRY_RUN" != "y" ] && bash -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	done
 
@@ -235,19 +256,44 @@ function loop_osx()
 
 function run()
 {
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && gcc -c "$PROJECT_PATH/fake_malloc.c" -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
-	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX$GCC_FLAGS -ldl"
+	[ "$DRY_RUN" != "y" ] && gcc -c "$PROJECT_PATH/fake_malloc.c" -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
 
-	[ "$EXTENSION" == "cpp" ] && GCC_CMD+=" -ldl"
-	
-	printf "$COLB%s$DEF\n" "$GCC_CMD"
-	
-	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+	if [ "$MAKEFILE_SUCCESS" = "y" ]
+	then
+		for cmd in "${MAKEFILE_CMDS[@]}"
+		do
+			if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
+			then
+				GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
+				printf "$COLB%s$DEF\n" "$GCC_CMD"
+				[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+			else
+				printf "$COLB%s$DEF\n" "$cmd"
+				[ "$DRY_RUN" != "y" ] && $cmd
+			fi
+			if ! [[ $? -eq 0 ]]
+			then
+				cleanup
+				exit
+			fi
+		done
+	else
+		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl"
+
+		printf "$COLB%s$DEF\n" "$GCC_CMD"
+
+		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+		if ! [[ $? -eq 0 ]]
+		then
+			cleanup
+			exit
+		fi
+	fi
 
 	printf "${COL}%s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$OUT_ARGS"
 	
-	sh -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
+	[ "$DRY_RUN" != "y" ] && bash -c "$PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	cleanup
 
@@ -255,19 +301,19 @@ function run()
 
 function run_osx()
 {
-	gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
+	[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
-	gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc_destructor.o
+	[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc_destructor.o
 
 	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
 	
 	printf "$COLB%s$DEF\n" "$GCC_CMD"
 	
-	sh -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+	[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 
 	printf "${COL}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 	
-	sh -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
+	[ "$DRY_RUN" != "y" ] && bash -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
 	cleanup
 }
@@ -276,7 +322,8 @@ function check_update()
 {
 	PATH_TO_BIN=$(which memdetect) || return
 
-	curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null || return
+	printf "curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh\n"
+	[ "$DRY_RUN" != "y" ] && curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null || return
 
 	DIFF=$(diff tmp $PATH_TO_BIN)
 	
@@ -285,9 +332,11 @@ function check_update()
 		chmod +x tmp
 		if [ -w $(dirname $PATH_TO_BIN) ]
 		then
-			mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF"
+			printf "mv tmp $PATH_TO_BIN\n"
+			[ "$DRY_RUN" != "y" ] && mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF"
 		else
-			(sudo mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
+			printf "sudo mv tmp $PATH_TO_BIN\n"
+			[ "$DRY_RUN" != "y" ] && (sudo mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
 		fi
 		exit 0
 	else
@@ -304,6 +353,12 @@ function add_to_path()
 	CONT=0
 
 	CONT2=0
+
+	EXE_PATH=("$(find . -maxdepth 1 -type f -name '*memdetect*')")
+
+	[ -z "${EXE_PATH[0]}" ] && printf "Error: memdetect executable not found\n" && exit 1
+
+	printf "Executable which will be installed: %s\n" "${EXE_PATH[0]}"
 
 	echo "In which path do you want to install it?"
 
@@ -325,58 +380,87 @@ function add_to_path()
 		(( CONT2 = CONT2 + 1 ))
 	done
 
-	[ ! -e "./memdetect.sh" ] && printf "Error: ./memdetect.sh not found\n" && exit 1
-
 	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
 
 	printf "${COLB}Adding memdetect to $PATH_CHOICE${DEF}\n"
 	
 	if [ -w "$PATH_CHOICE" ]
 	then
-		cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
+		printf "cp ${EXE_PATH[0]} ${PATH_CHOICE%/}/memdetect\n"
+		[ "$DRY_RUN" != "y" ] && cp ${EXE_PATH[0]} "${PATH_CHOICE%/}"/memdetect
 	else
-		set -x
-		sudo cp ./memdetect.sh "${PATH_CHOICE%/}"/memdetect
+		printf "sudo cp ${EXE_PATH[0]} ${PATH_CHOICE%/}/memdetect\n"
+		[ "$DRY_RUN" != "y" ] && sudo cp ${EXE_PATH[0]} "${PATH_CHOICE%/}"/memdetect
 	fi
 
 }
 
-function check_flag()
+function catch_makefile()
 {
-	for FL in "${FLAGS[@]}"
+	PROJECT_PATH="."
+	readarray -t MAKEFILE_CMDS < <(make -n $MAKE_RULE)
+	MAKEFILE_SUCCESS="y"
+	LINK_STEP=""
+	for i in "${!MAKEFILE_CMDS[@]}"
 	do
-		[ "$1" = "$FL" ] && return 0
+		if [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
+		then
+			MAKEFILE_CMDS[$i]="g${MAKEFILE_CMDS[$i]}"
+		else
+			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang/gcc})"
+		fi
+		if [[ "${MAKEFILE_CMDS[$i]}" == "gcc"* ]]
+		then
+			LINK_STEP=$i
+		fi
+	done
+	if [ "$LINK_STEP" = "" ]
+	then
+		printf "Error: Makefile tools failed (tried command:'make -n')\n"		
+		exit 1
+	fi
+	MAKEFILE_CMDS[$LINK_STEP]+=" $PROJECT_PATH/fake_malloc.o -o malloc_debug"
+}
+
+function check_options()
+{
+	for OPT in "${OPTIONS[@]}"
+	do
+		[ "$1" = "$OPT" ] && return 0
 	done
 	return 1
 }
 
 I=0
 
-[[ $ARGS_LEN == 0 ]] && printf "No arguments specified, use -h or --help to display the help prompt\n" && exit 1
-
-if ! check_flag "${ARGS[$I]}"
+if [[ $I -lt $ARGS_LEN ]] && ! check_options "${ARGS[$I]}"
 then
 	if [ -d "${ARGS[$I]}" ]
 	then
-		PROJECT_PATH=${ARGS[$I]%/}
-		((I = I + 1))
-	else
 		while [[ $I -lt $ARGS_LEN ]]
 		do
 			[[ ${ARGS[$I]} == "-"* ]] && break
 			[ ! -e "${ARGS[$I]}" ] && echo "Error: ${ARGS[$I]} not found" && exit 1
+			PROJECT_PATH+=" ${ARGS[$I]%/}"
+			(( I = I + 1 ))
+		done
+	else
+		while [[ $I -lt $ARGS_LEN ]]
+		do
+			[[ ${ARGS[$I]} == "-"* ]] && break
+			PROJECT_PATH="."
+			[ ! -e "${ARGS[$I]}" ] && echo "Error: ${ARGS[$I]} not found" && exit 1
 			FILE_PATH+=" ${ARGS[$I]}"
 			(( I = I + 1 ))
 		done
-		PROJECT_PATH='.'
 	fi
 fi
 
-if ! check_flag "${ARGS[$I]}"
+if [[ $I -lt $ARGS_LEN ]] && ! check_options "${ARGS[$I]}"
 then
 	while [[ $I -lt $ARGS_LEN ]]
 	do
-		check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+		check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 		GCC_FLAGS+=" ${ARGS[$I]}"
 		(( I = I + 1 ))
 	done
@@ -389,24 +473,24 @@ do
 	case $arg in
 
         "-e" | "--exclude")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 				EXCLUDE_FIND+="! -path '*${ARGS[$I]}*' "
 				(( I = I + 1 ))
 			done
         ;;
 
 		"-fo" | "--filter-out")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
 			II=0
 			EXCLUDE_RES="&& ("
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&"
 				(( II = II + 1))
 				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
@@ -416,13 +500,13 @@ do
 		;;
 
 		"-fi" | "--filter-in")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
 			II=0
 			EXCLUDE_RES="&& !("
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 				! [[ $II -eq  0 ]] && EXCLUDE_RES+=" &&"
 				(( II = II + 1))
 				EXCLUDE_RES+=" !strstr(stack[2], \"${ARGS[$I]}\") && !strstr(stack[3], \"${ARGS[$I]}\")"
@@ -454,14 +538,14 @@ do
 		;;
 
 		"-fail")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			NEW_VAL=${ARGS[$I + 1]}
 			if ! [[ $NEW_VAL =~ $RE ]]
 			then
 				if [ "$NEW_VAL" = "loop" ]
 				then
 					MALLOC_FAIL_LOOP=1
-					if [ -n "${ARGS[$I + 2]}" ] && ! check_flag "${ARGS[$I + 2]}" && [[ ${ARGS[$I + 2]} =~ $RE ]]
+					if [ -n "${ARGS[$I + 2]}" ] && ! check_options "${ARGS[$I + 2]}" && [[ ${ARGS[$I + 2]} =~ $RE ]]
 					then
 						COUNTER=${ARGS[$I + 2]}
 					else
@@ -485,22 +569,33 @@ do
 		;;
 
         "-fl" | "--flags")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 				GCC_FLAGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
 		;;
 
+		"-n" | "--dry-run")
+			printf "${COLB}Executing dry run...$DEF\n"
+			DRY_RUN="y"
+		;;
+
+		"-m" | "--make-rule")
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			(( I = I + 1 ))
+			MAKE_RULE="${ARGS[$I]}"
+		;;
+
 		"-a" | "--args")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: %s flag value '%s' is a memdetect flag\n" "${ARGS[$I]}" "${ARGS[$I + 1]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
 			while [[ $I -lt $ARGS_LEN ]]
 			do
-				check_flag "${ARGS[$I]}" && (( I = I - 1 )) && break
+				check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
 				OUT_ARGS+=" ${ARGS[$I]}"
 				(( I = I + 1 ))
 			done
@@ -508,7 +603,7 @@ do
 
 		"-lb" | "--leaks-buff")
 			NEW_VAL=${ARGS[$I + 1]}
-			(! [[ $NEW_VAL =~ $RE ]] || check_flag "$NEW_VAL") && printf "Error: the value of --leaks-buff '%s' is not a number\n" "$NEW_VAL" && exit 1
+			(! [[ $NEW_VAL =~ $RE ]] || check_options "$NEW_VAL") && printf "Error: the value of --leaks-buff '%s' is not a number\n" "$NEW_VAL" && exit 1
 			ADDR_SIZE=$NEW_VAL
 		;;
 
@@ -521,25 +616,25 @@ do
 		;;
 
 		"--output")
-			check_flag "${ARGS[$I + 1]}" && printf "Error: ${ARGS[$I]} flag value '${ARGS[$I + 1]}' is a memdetect flag\n" && exit 1
+			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
 			(( I = I + 1 ))
-			if [ -f "${ARGS[$I]}" ]
+			if [ -f "${ARGS[$I]}" ] && [ "$DRY_RUN" != "y" ]
 			then
 				printf "Overwrite existing file \"${ARGS[$I]}\"? [y/N]"
 				read -rn1 OUTPUT_CHOICE
 				if [ "$OUTPUT_CHOICE" = "y" ] || [ "$OUTPUT_CHOICE" = "Y" ]
 				then
 					printf "\n"
-				 	rm -f "${ARGS[$I]}"
+				 	[ "$DRY_RUN" != "y" ] && rm -f "${ARGS[$I]}"
 				else
 					printf "\nExiting\n"
 					exit 1
 				fi
 			fi
-			touch "${ARGS[$I]}" || (printf "Failed creating output file\n" && exit 1)
-			echo "Output file ready!"
-			exec 1>"${ARGS[$I]}"
-			exec 2>&1
+			[ "$DRY_RUN" != "y" ] && touch "${ARGS[$I]}" || (printf "Failed creating output file\n" && exit 1)
+			[ "$DRY_RUN" != "y" ] && echo "Output file ready!"
+			[ "$DRY_RUN" != "y" ] && exec 1>"${ARGS[$I]}"
+			[ "$DRY_RUN" != "y" ] && exec 2>&1
 		;;
 
         "-h" | "--help")
@@ -563,7 +658,7 @@ done
 
 ! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR=""
 
-{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Error: Missing path to project or file list.\n" && exit 1
+{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "Info: Missing path to project or file list.\nFalling back to Makefile tools\n" && catch_makefile
 
 { [ -z "$FILE_PATH" ] && [ ! -d "$PROJECT_PATH" ]; } && echo "Error: $PROJECT_PATH is not a folder" && exit 1
 
@@ -572,15 +667,15 @@ then
 	AS_COMM="//"
 	AS_FUNC="fake_"
 	AS_OG=""
-	echo "extern void __attribute__((destructor)) malloc_hook_report();
+	[ "$DRY_RUN" != "y" ] && echo "extern void __attribute__((destructor)) malloc_hook_report();
 extern void __attribute__((constructor)) malloc_hook_pid_detect();" > $PROJECT_PATH/fake_malloc_destructor.c
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ]) && SRC+="$PROJECT_PATH/fake_malloc_destructor.o "
-elif ([ -n "$FILE_PATH" ] || [ "$EXTENSION" == "cpp" ])
+	([ -n "$FILE_PATH" ] || [ "$EXTENSION" = "cpp" ]) && SRC+="$PROJECT_PATH/fake_malloc_destructor.o "
+elif ([ -n "$FILE_PATH" ] || [ "$EXTENSION" = "cpp" ])
 then
 	SRC+="$PROJECT_PATH/fake_malloc.o "
 fi
 
-eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
+[ "$DRY_RUN" != "y" ] && eval "cat << EOF > $PROJECT_PATH/fake_malloc.c
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <execinfo.h>
@@ -883,7 +978,6 @@ fi
 
 printf "$COLB================= memdetect by XEDGit ==================
 $DEF"
-
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
