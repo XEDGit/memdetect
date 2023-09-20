@@ -58,72 +58,72 @@ HELP_MSG='
 ~~ MEMDETECT HELPER: ~~
 
 SYNTAX:
-{} = positional arguments (mandatory)
+{} = mutually exclusive arguments
 [] = optional arguments
-<> = fields to be filled by the user
-OR = only one of the arguments between OR can be specified, otherwise the first one to be specified is considered
 
 USAGE:
-./memdetect {<file0> [<file1>...] OR <directory path>} [<gcc flags>] [<memdetect flags>]
+./memdetect [{file0 file1 ... | directory_path}] [gcc_flags] [memdetect_options]
 
-All the <gcc flags> will be added to the gcc command in writing order\n
-Flags:
+Options:
 
-	Compiling:
+Compiling:
 
-		-fl OR --flags <flag0 ... flagn>: Another way to specify flags to use when compiling with gcc
-   
-		-e OR --exclude <folder name>: Specify a folder inside the <directory path> to exclude from compiling
+    -fl | --flags <flag0 ... flagn>: Another way to specify options to pass to gcc for compilation
 
-	Executing:
-   
-		-a OR --args <arg0> ... <argn>: Specify arguments to run with the executable
+    -e | --exclude <folder name>: Specify a folder inside the directorypath which gets excluded from compiling
 
+Executing:
 
-	Fail malloc (Use one per command):
+    -a | --args <arg0> ... <argn>: Specify arguments to run with the executable
 
-		-fail <number>: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
+    -n | --dry-run: Run the program printing every command and without executing any
 
-		-fail <all>: Adding this flag will fail all the malloc calls
+Fail malloc (Use one per command):
 
-		-fail loop [<N>]: Your code will be compiled and ran in a loop, failing the Nth malloc call on the 1st execution, the N+1th on the 2nd execution and so on. It will start by failing Nth malloc and continue. **This flag is really useful for debugging**
+    -fail <number>: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-	Output manipulation:
+    -fail <all>: Adding this will fail all the malloc calls
 
-		-o OR --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
+    -fail <loop> <start from>: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after loop it will start by failing start from malloc and continue. This option is useful for debugging
 
-		-il OR --include-lib: Adding this flag will include in the output the library name from where the first shown function have been called
+Output manipulation:
 
-		-ie OR --include-ext: Adding this flag will include in the output the calls to malloc and free from outside your source files. Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
+    -o | --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-		-ix OR --include-xmalloc: Adding this flag will include in the output the calls to xmalloc and xrealloc
+    -il | --include-lib: This option will include in the output the library name from where the first shown function have been called
 
-		-or OR --only-report: Only display the leaks report at the program exit
+    -ie | --include-ext: This option will include in the output the calls to malloc and free from outside your source files.
+    Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
 
-		-nr OR --no-report: Does not display the leaks report at the program exit
+    -ix | --include-xmalloc: This option will include in the output the calls to xmalloc and xrealloc
 
-		-fi OR --filter-in <arg0 ... argn>: Show only results from memdetect output if substring <arg> is found inside the output line
+    -or | --only-report: Only display the leaks report at the program exit
 
-		-fo OR --filter-out <arg0 ... argn>: Filter out results from memdetect output if substring <arg> is found inside the output line
+    -nr | --no-report: Does not display the leaks report at the program exit
 
-	Output files:
+    -fi | --filter-in <arg0> ... <argn>: Show only results from memdetect output if substring <arg> is found inside the output line
 
-		-p OR --preserve: Adding this flag will mantain source and object files from memdetect execution 
+    -fo | --filter-out <arg0> ... <argn>: Filter out results from memdetect output if substring arg is found inside the output line
 
-	Program settings:
+Output files:
 
- 		-+ OR -++: Use to run in C++ mode
+    -p | --preserve: This option will mantain the executable output files
 
-		-u OR --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
+    Program settings:
 
-		-lb OR --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
-     
-		-h OR --help: Display this help message
+        -+ | -++: Use to run in C++ mode
 
-		-cl OR --clean: Clean files left by -p or --preserve flag 
- 
-		--add-path: adds memdetect executable to a $PATH of your choice
+        -u | --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
 
+        -lb | --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
+
+        -m | --make-rule <rule>: Specify the rule to be executed when using makefile tools (no directory or file specified)
+
+        -h | --help: Display help message
+
+        --add-path: adds memdetect executable to a $PATH of your choice
+
+All the compiler flags will be added to the gcc command in writing order
 '
 
 function cleanup()
@@ -638,7 +638,7 @@ do
 		;;
 
         "-h" | "--help")
-			printf "$HELP_MSG" | less
+			printf "$HELP_MSG"
             exit
         ;;
 
