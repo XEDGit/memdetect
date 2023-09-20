@@ -28,7 +28,7 @@ cd memdetect
 ```
 
 ### Adding memdetect to your $PATH:
-You can add this program to your $PATH by adding this flag
+You can add this program to your $PATH by using this option
 
 ```console
 ./memdetect.sh --add-path
@@ -36,69 +36,66 @@ You can add this program to your $PATH by adding this flag
 from now on you can just type `memdetect` in your terminal from any folder in the system!
  
 ### Makefile integration:
+
+#### Automatic
+The newly integrated Makefile tools will try to read and execute your current folder Makefile's first rule (or the one specified via -m)  
+To run in makefile mode do not specify any directory or file before the memdetect options
+```shell
+memdetect # You can optionally add gcc/memdetect options
+```
+
+#### Manual
 You can integrate this program with Makefile by executing this command in your Makefile path
 
 ```shell
 echo >> ./Makefile '
 mem:
-    /path/to/memdetect.sh /path/to/project $(GCC_FLAGS) # add memdetect flags here'
-```
-Another useful integration, if you want the freedom of executing with different flags everytime
-
-```shell
-echo >> ./Makefile '
-mem:
-    /path/to/memdetect.sh /path/to/project $(GCC_FLAGS) $(1)'
-```
-
-Which can be executed with
-
-```shell
-make mem 1='-fail 2'
+    /path/to/memdetect.sh /path/to/project $(CFLAGS) # add memdetect options here'
 ```
 
 ## Run:
 
-Memdetect runs standard in **C mode**, to enable **C++ mode** use the `-+` flag
+Memdetect runs standard in **C mode**, to enable **C++ mode** use the `-+` option
 
 
-You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c or .cpp file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` flag
+You can either run memdetect on **files** by specifying their name, or with a **directory path**. If you insert a directory path every .c or .cpp file inside the directory is gonna be compiled, to exclude some sub-folder use the `-e` option
 
 ### Usage:
-    ./memdetect.sh { <directory_path> | <file> [<file1...>] } [<compiler_flags>] [memdetect flags]
+    ./memdetect.sh { [ directory_paths | file [file1 ...] ] } [compiler_flags] [memdetect options]
 
-### Flags:
+### Options:
 
  - #### Compiling:
 
-   - `-fl | --flags <flag0 ... flagn>`: Another way to specify flags to use when compiling with gcc
+   - `-fl | --flags <flag0 ... flagn>`: Another way to specify options to pass to gcc for compilation
    
    - `-e | --exclude <folder name>`: Specify a folder inside the `directorypath` which gets excluded from compiling
 
  - #### Executing:
    
    - `-a | --args <arg0> ... <argn>`: Specify arguments to run with the executable
-   - `-n | --dry-run`: Run the program printing every command and without executing any 
+
+   - `-n | --dry-run`: Run the program printing every command and without executing any
 
 
  - #### Fail malloc (Use one per command):
 
    - `-fail <number>`: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
 
-   - `-fail <all>`: Adding this flag will fail all the malloc calls
+   - `-fail <all>`: Adding this will fail all the malloc calls
 
-   - `-fail <loop> <start from>`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start from` malloc and continue. **This flag is really useful for debugging**
+   - `-fail <loop> <start from>`: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after `loop` it will start by failing `start from` malloc and continue. **This option is useful for debugging**
 
  - #### Output manipulation:
 
    - `-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-   - `-il | --include-lib`: Adding this flag will include in the output the library name from where the first shown function have been called
+   - `-il | --include-lib`: This option will include in the output the library name from where the first shown function have been called
 
-   - `-ie | --include-ext`: Adding this flag will include in the output the calls to malloc and free from outside your source files.  
+   - `-ie | --include-ext`: This option will include in the output the calls to malloc and free from outside your source files.  
    **Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`**
 
-   - `-ix | --include-xmalloc`: Adding this flag will include in the output the calls to xmalloc and xrealloc
+   - `-ix | --include-xmalloc`: This option will include in the output the calls to xmalloc and xrealloc
 
    - `-or | --only-report`: Only display the leaks report at the program exit
 
@@ -110,7 +107,7 @@ You can either run memdetect on **files** by specifying their name, or with a **
 
  - #### Output files:
 
-   - `-p | --preserve`: Adding this flag will mantain the executable output files
+   - `-p | --preserve`: This option will mantain the executable output files
 
  - #### Program settings:
 
@@ -127,7 +124,7 @@ You can either run memdetect on **files** by specifying their name, or with a **
    - `--add-path`: adds memdetect executable to a $PATH of your choice
 
 
- All the optional flags will be added to the gcc command in writing order
+ All the compiler flags will be added to the gcc command in writing order
 
 ### Examples:
 
@@ -158,10 +155,10 @@ You can either run memdetect on **files** by specifying their name, or with a **
     - for each free call, it is printed on the stdout, with the last two functions in the stack and the address freed
 
  - `(MALLOC_FAIL)`:
-    - when a malloc call gets failed by the `-fail` flag it will be printed on the stdout with the last two functions in the stack
+    - when a malloc call gets failed by the `-fail` option it will be printed on the stdout with the last two functions in the stack
 
  - `(MALLOC_ERROR)`:
-    - This means the program didn't have enough buffer size for storing malloc calls, use the flag `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
+    - This means the program didn't have enough buffer size for storing malloc calls, use the option `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
 
 After your program exits a **leaks report** will be printed. 
 
