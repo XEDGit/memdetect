@@ -41,7 +41,7 @@ ADDR_SIZE=10000
 
 ONLY_SOURCE=1
 
-MAKE_RULE="all"
+MAKE_RULE=""
 
 MALLOC_FAIL_INDEX=0
 
@@ -168,14 +168,13 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 
-		[ "$CONTINUE" = $'\e' ] && read -rn2 CONTINUE
-
 		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
 		
 		if [ "$MAKEFILE_SUCCESS" = "y" ]
 		then
 			for cmd in "${MAKEFILE_CMDS[@]}"
 			do
+				[ -z "$cmd" ] && continue
 				if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
 				then
 					GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
@@ -184,6 +183,11 @@ function loop()
 				else
 					printf "$COLB%s$DEF\n" "$cmd"
 					[ "$DRY_RUN" != "y" ] && $cmd
+				fi
+				if ! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ]
+				then
+					cleanup
+					exit
 				fi
 			done
 		else
@@ -263,16 +267,17 @@ function run()
 	then
 		for cmd in "${MAKEFILE_CMDS[@]}"
 		do
+			[ -z "$cmd" ] && continue
 			if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
 			then
 				GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
 				printf "$COLB%s$DEF\n" "$GCC_CMD"
 				[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
 			else
-				printf "$COLB%s$DEF\n" "$cmd"
+				printf "$COL%s$DEF\n" "$cmd"
 				[ "$DRY_RUN" != "y" ] && $cmd
 			fi
-			if ! [[ $? -eq 0 ]]
+			if ! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ]
 			then
 				cleanup
 				exit
@@ -284,7 +289,7 @@ function run()
 		printf "$COLB%s$DEF\n" "$GCC_CMD"
 
 		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
-		if ! [[ $? -eq 0 ]]
+		if ! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ]
 		then
 			cleanup
 			exit
@@ -398,27 +403,49 @@ function add_to_path()
 function catch_makefile()
 {
 	PROJECT_PATH="."
-	readarray -t MAKEFILE_CMDS < <(make -n $MAKE_RULE)
+	readarray -t MAKEFILE_CMDS < <(make --debug=j -n $MAKE_RULE)
 	MAKEFILE_SUCCESS="y"
 	LINK_STEP=""
+	TMP_FILES=0
+	MAKEFILE_DEPTH=0
 	for i in "${!MAKEFILE_CMDS[@]}"
 	do
-		if [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
+		if [[ "${MAKEFILE_CMDS[$i]}" == "make"* ]]
+		then
+			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/[a-zA-Z0-9]*make/echo making target/')"
+			MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | grep -Po '(?<=-C )\S*')"
+			! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
+		elif [[ "${MAKEFILE_CMDS[$i]}" == *"child"*"PID"* ]]
+		then
+			if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
+			then
+				(( MAKEFILE_DEPTH-- ))
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:i-1}" "popd" "${MAKEFILE_CMDS[@]:i}")
+			elif [ "${MAKEFILE_CMDS[$i]:0:4}" = "Live" ]
+			then
+				(( MAKEFILE_DEPTH++ ))
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:i-1}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:i}")
+			fi
+			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
+		elif [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
 		then
 			MAKEFILE_CMDS[$i]="g${MAKEFILE_CMDS[$i]}"
 		else
 			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang/gcc})"
 		fi
+
 		if [[ "${MAKEFILE_CMDS[$i]}" == "gcc"* ]]
 		then
 			LINK_STEP=$i
 		fi
+
 	done
 	if [ "$LINK_STEP" = "" ]
 	then
 		printf "Error: Makefile tools failed (tried command:'make -n')\n"		
 		exit 1
 	fi
+
 	MAKEFILE_CMDS[$LINK_STEP]+=" $PROJECT_PATH/fake_malloc.o -o malloc_debug"
 }
 
