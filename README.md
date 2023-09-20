@@ -78,6 +78,7 @@ You can either run memdetect on **files** by specifying their name, or with a **
  - #### Executing:
    
    - `-a | --args <arg0> ... <argn>`: Specify arguments to run with the executable
+   - `-n | --dry-run`: Run the program printing every command and without executing any 
 
 
  - #### Fail malloc (Use one per command):
@@ -115,9 +116,11 @@ You can either run memdetect on **files** by specifying their name, or with a **
 
     - `-+ | -++`: Use to run in C++ mode
 
-	- `-u | --update`: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
+    - `-u | --update`: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
 
    - `-lb | --leaks-buff <size>`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
+
+   - `-m | --make-rule <rule>`: Specify the rule to be executed when using makefile tools (no directory or file specified)
      
    - `-h | --help`: Display help message
  
