@@ -141,8 +141,6 @@ function cleanup()
 	
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc_destructor.c"
 
-	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc_destructor.o"
-
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/fake_malloc.dylib"
 
 	[ -z "$PRESERVE" ] && rm -f "$PROJECT_PATH/malloc_debug"
@@ -168,7 +166,7 @@ function loop()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 
-		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl
+		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH/fake_malloc.c" -c -o "$PROJECT_PATH/fake_malloc.o" -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER
 		
 		if [ "$MAKEFILE_SUCCESS" = "y" ]
 		then
@@ -177,7 +175,7 @@ function loop()
 				[ -z "$cmd" ] && continue
 				if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
 				then
-					GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
+					GCC_CMD="$cmd $GCC_FLAGS"
 					printf "$COLB%s$DEF\n" "$GCC_CMD"
 					[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
 				else
@@ -230,23 +228,40 @@ function loop_osx()
 
 		[ ! "$CONTINUE" = $'\n' ] && printf "\n"
 		
-		[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER || (cleanup && exit 1)
-		
-		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH/fake_malloc_destructor.o"
+		[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
-		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
-		
-		printf "$COLB%s$DEF\n" "$GCC_CMD"
-		
-		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+		[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc.o
 
-		if ! [[ $? -eq 0 ]]
+		if [ "$MAKEFILE_SUCCESS" = "y" ]
+		then
+			for cmd in "${MAKEFILE_CMDS[@]}"
+			do
+				[ -z "$cmd" ] && continue
+				if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
+				then
+					GCC_CMD="$cmd"
+					printf "$COLB%s$DEF\n" "$GCC_CMD"
+					[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+				else
+					printf "$COL%s$DEF\n" "$cmd"
+					[ "$DRY_RUN" != "y" ] && $cmd
+				fi
+			done
+		else
+
+			GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
+			
+			printf "$COLB%s$DEF\n" "$GCC_CMD"
+			
+			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+
+		fi
+		if ! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ]
 		then
 			cleanup
 			exit
 		fi
-
-		printf "${COLB}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
+		printf "${COL}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 		
 		[ "$DRY_RUN" != "y" ] && bash -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
 
@@ -261,7 +276,7 @@ function loop_osx()
 function run()
 {
 
-	[ "$DRY_RUN" != "y" ] && gcc -c "$PROJECT_PATH/fake_malloc.c" -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl
+	[ "$DRY_RUN" != "y" ] && gcc -c "$PROJECT_PATH/fake_malloc.c" -o "$PROJECT_PATH/fake_malloc.o" -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DINCL_LIB=$INCL_LIB -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX
 
 	if [ "$MAKEFILE_SUCCESS" = "y" ]
 	then
@@ -270,7 +285,7 @@ function run()
 			[ -z "$cmd" ] && continue
 			if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
 			then
-				GCC_CMD="$cmd -rdynamic$GCC_FLAGS -ldl"
+				GCC_CMD="$cmd $GCC_FLAGS"
 				printf "$COLB%s$DEF\n" "$GCC_CMD"
 				[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
 			else
@@ -308,14 +323,37 @@ function run_osx()
 {
 	[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC "$PROJECT_PATH"/fake_malloc.c -o "$PROJECT_PATH"/fake_malloc.dylib -DONLY_SOURCE=$ONLY_SOURCE -DINCL_LIB=$INCL_LIB -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX || (cleanup && exit 1)
 
-	[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc_destructor.o
+	[ "$DRY_RUN" != "y" ] && gcc "$PROJECT_PATH"/fake_malloc_destructor.c -c -o "$PROJECT_PATH"/fake_malloc.o
 
-	GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
-	
-	printf "$COLB%s$DEF\n" "$GCC_CMD"
-	
-	[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1" || (cleanup && exit 1)
+	if [ "$MAKEFILE_SUCCESS" = "y" ]
+	then
+		for cmd in "${MAKEFILE_CMDS[@]}"
+		do
+			[ -z "$cmd" ] && continue
+			if [ "$(echo \"$cmd\" | grep -e 'gcc*' )" != "" ]
+			then
+				GCC_CMD="$cmd"
+				printf "$COLB%s$DEF\n" "$GCC_CMD"
+				[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+			else
+				printf "$COL%s$DEF\n" "$cmd"
+				[ "$DRY_RUN" != "y" ] && $cmd
+			fi
+		done
+	else
 
+		GCC_CMD="$COMPILER $SRC -rdynamic -o $PROJECT_PATH/malloc_debug$GCC_FLAGS"
+		
+		printf "$COLB%s$DEF\n" "$GCC_CMD"
+		
+		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+
+	fi
+	if ! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ]
+	then
+		cleanup
+		exit
+	fi
 	printf "${COL}DYLD_INSERT_LIBRARIES=%s/fake_malloc.dylib %s/malloc_debug%s:$DEF\n" "$PROJECT_PATH" "$PROJECT_PATH" "$OUT_ARGS"
 	
 	[ "$DRY_RUN" != "y" ] && bash -c "DYLD_INSERT_LIBRARIES=$PROJECT_PATH/fake_malloc.dylib $PROJECT_PATH/malloc_debug$OUT_ARGS 2>&1"
@@ -403,21 +441,19 @@ function add_to_path()
 function catch_makefile()
 {
 	PROJECT_PATH="."
-	readarray -t MAKEFILE_CMDS < <(make --debug=j -n $MAKE_RULE)
+	IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS < <( make --debug=j -n $MAKE_RULE && printf '\0' )
 	MAKEFILE_SUCCESS="y"
 	LINK_STEP=""
 	TMP_FILES=0
 	MAKEFILE_DEPTH=0
 	for i in "${!MAKEFILE_CMDS[@]}"
 	do
-		if [[ "${MAKEFILE_CMDS[$i]}" == "make"* ]]
+		((z = i - 1 ))
+		if [[ "${MAKEFILE_CMDS[$i]}" == "GNU Make "* ]]
 		then
-			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/[a-zA-Z0-9]*make/echo making target/')"
-			MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | grep -Po '(?<=-C )\S*')"
-			! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
+			[[ $i -gt 0 ]] && MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "${MAKEFILE_CMDS[@]:$i+6}") || MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:$i+6}")
 		elif [[ "${MAKEFILE_CMDS[$i]}" == *"child"*"PID"* ]]
 		then
-			((z = i - 1 ))
 			if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
 			then
 				(( MAKEFILE_DEPTH-- ))
@@ -428,6 +464,11 @@ function catch_makefile()
 				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$z}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
 			fi
 			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
+		elif [[ "${MAKEFILE_CMDS[$i]}" == *"/make"* ]]
+		then
+			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*make/echo making target/')"
+			MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*-C //' | sed -E 's/ .*//')"
+			! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
 		elif [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
 		then
 			MAKEFILE_CMDS[$i]="g${MAKEFILE_CMDS[$i]}"
@@ -697,7 +738,6 @@ then
 	AS_OG=""
 	[ "$DRY_RUN" != "y" ] && echo "extern void __attribute__((destructor)) malloc_hook_report();
 extern void __attribute__((constructor)) malloc_hook_pid_detect();" > $PROJECT_PATH/fake_malloc_destructor.c
-	([ -n "$FILE_PATH" ] || [ "$EXTENSION" = "cpp" ]) && SRC+="$PROJECT_PATH/fake_malloc_destructor.o "
 elif ([ -n "$FILE_PATH" ] || [ "$EXTENSION" = "cpp" ])
 then
 	SRC+="$PROJECT_PATH/fake_malloc.o "
