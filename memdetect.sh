@@ -68,15 +68,15 @@ Options:
 
 Compiling:
 
-    -fl | --flags <flag0 ... flagn>: Another way to specify options to pass to gcc for compilation
+    -fl --flags <flag0 ... flagn>: Another way to specify options to pass to gcc for compilation
 
-    -e | --exclude <folder name>: Specify a folder inside the directorypath which gets excluded from compiling
+    -e --exclude <folder name>: Specify a folder inside the directorypath which gets excluded from compiling
 
 Executing:
 
-    -a | --args <arg0> ... <argn>: Specify arguments to run with the executable
+    -a --args <arg0> ... <argn>: Specify arguments to run with the executable
 
-    -n | --dry-run: Run the program printing every command and without executing any
+    -n --dry-run: Run the program printing every command and without executing any
 
 Fail malloc (Use one per command):
 
@@ -88,40 +88,40 @@ Fail malloc (Use one per command):
 
 Output manipulation:
 
-    -o | --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
+    -o --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
-    -il | --include-lib: This option will include in the output the library name from where the first shown function have been called
+    -il --include-lib: This option will include in the output the library name from where the first shown function have been called
 
-    -ie | --include-ext: This option will include in the output the calls to malloc and free from outside your source files.
-    Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
+    -ie --include-ext: This option will include in the output the calls to malloc and free from outside your source files.
+    Note: Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
 
-    -ix | --include-xmalloc: This option will include in the output the calls to xmalloc and xrealloc
+    -ix --include-xmalloc: This option will include in the output the calls to xmalloc and xrealloc
 
-    -or | --only-report: Only display the leaks report at the program exit
+    -or --only-report: Only display the leaks report at the program exit
 
-    -nr | --no-report: Does not display the leaks report at the program exit
+    -nr --no-report: Does not display the leaks report at the program exit
 
-    -fi | --filter-in <arg0> ... <argn>: Show only results from memdetect output if substring <arg> is found inside the output line
+    -fi --filter-in <arg0> ... <argn>: Show only results from memdetect output if substring <arg> is found inside the output line
 
-    -fo | --filter-out <arg0> ... <argn>: Filter out results from memdetect output if substring arg is found inside the output line
+    -fo --filter-out <arg0> ... <argn>: Filter out results from memdetect output if substring arg is found inside the output line
 
 Output files:
 
-    -p | --preserve: This option will mantain the executable output files
+    -p --preserve: This option will mantain the executable output files
 
-    Program settings:
+Program settings:
 
-        -+ | -++: Use to run in C++ mode
-
-        -u | --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
-
-        -lb | --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
-
-        -m | --make-rule <rule>: Specify the rule to be executed when using makefile tools (no directory or file specified)
-
-        -h | --help: Display help message
-
-        --add-path: adds memdetect executable to a $PATH of your choice
+    -+ -++: Use to run in C++ mode
+	
+	-u --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
+	
+	-lb --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
+	
+	-m --make-rule <rule>: Specify the rule to be executed when using makefile tools (no directory or file specified)
+	
+	-h --help: Display help message
+    
+	--add-path: adds memdetect executable to a $PATH of your choice
 
 All the compiler flags will be added to the gcc command in writing order
 '
