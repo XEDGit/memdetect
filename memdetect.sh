@@ -417,14 +417,15 @@ function catch_makefile()
 			! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
 		elif [[ "${MAKEFILE_CMDS[$i]}" == *"child"*"PID"* ]]
 		then
+			((z = i - 1 ))
 			if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
 			then
 				(( MAKEFILE_DEPTH-- ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:i-1}" "popd" "${MAKEFILE_CMDS[@]:i}")
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$z}" "popd" "${MAKEFILE_CMDS[@]:$i}")
 			elif [ "${MAKEFILE_CMDS[$i]:0:4}" = "Live" ]
 			then
 				(( MAKEFILE_DEPTH++ ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:i-1}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:i}")
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$z}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
 			fi
 			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
 		elif [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
