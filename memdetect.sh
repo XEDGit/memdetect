@@ -192,7 +192,7 @@ function loop()
 			done
 		else
 
-			GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$COUNTER -ldl"
+			GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -ldl"
 
 			printf "$COL%s$DEF\n" "$GCC_CMD"
 
@@ -314,7 +314,7 @@ function run()
 			[ "$DRY_RUN" != "y" ] && ! [[ $? -eq 0 ]] && cleanup && exit 1
 		done
 	else
-		GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -DINCL_LIB=$INCL_LIB -DONLY_SOURCE=$ONLY_SOURCE -DADDR_ARR_SIZE=$ADDR_SIZE -DMALLOC_FAIL_INDEX=$MALLOC_FAIL_INDEX -ldl"
+		GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -ldl"
 
 		printf "$COL%s$DEF\n" "$GCC_CMD"
 
