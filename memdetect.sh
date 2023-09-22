@@ -110,118 +110,157 @@ function cleanup()
 
 function catch_makefile()
 {
+	# cat ./Makefile | sed -E 's/^\t(\-|@|\+|.*\/)?make/\t$(MAKE)/g' > ./memdtc_Makefile.tmp
+
+	# rm -f ./memdtc_Makefile.tmp
+
+	# TMP_FILES=0
+
+	# MAKEFILE_DEPTH=0
+
+	# CMDS_LEN=${#MAKEFILE_CMDS[@]}
+
+	# i=0
+
+	# while [[ $i -lt $CMDS_LEN ]]
+	# do
+		# if [[ "${MAKEFILE_CMDS[$i]}" == "GNU Make "* ]]
+		# then
+		# 	if [[ $i -gt 0 ]]
+		# 	then
+		# 		MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "${MAKEFILE_CMDS[@]:$i+6}")
+
+		# 	else
+		# 		MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:$i+6}")
+		# 		(( i-- ))
+
+		# 	fi
+		# 	(( CMDS_LEN = CMDS_LEN - 6 ))
+
+		# elif [[ "${MAKEFILE_CMDS[$i]}" == *"child"*"PID"* ]]
+		# then
+		# 	if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
+		# 	then
+		# 		(( MAKEFILE_DEPTH-- ))
+		# 		MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "popd" "${MAKEFILE_CMDS[@]:$i}")
+
+		# 	elif [ "${MAKEFILE_CMDS[$i]:0:4}" = "Live" ]
+		# 	then
+		# 		(( MAKEFILE_DEPTH++ ))
+		# 		MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
+
+		# 	fi
+		# 	MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
+
+		# elif [ -n "$(echo ${MAKEFILE_CMDS[$i]} | grep -E '^(\-|@|\+|.*\/)?make.*')" ]
+		# then
+		# 	MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*make/echo Making target/')"
+		# 	MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*-C //' | sed -E 's/ .*//')"
+		# 	! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
+
+		# elif [ "$EXTENSION" = 'cpp' ] && [ "${MAKEFILE_CMDS[$i]:0:4}" = "c++ " ]
+		# then
+		# 	MAKEFILE_CMDS[$i]="$COMPILER ${MAKEFILE_CMDS[$i]:5}"
+
+		# elif [ "$EXTENSION" = 'cpp' ]
+		# then
+		# 	MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang++/$COMPILER})"
+
+		# elif [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
+		# then
+		# 	MAKEFILE_CMDS[$i]="$COMPILER ${MAKEFILE_CMDS[$i]:4}"
+
+		# else
+		# 	MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang/$COMPILER})"
+
+		# fi
+
+	# 	if [[ $i -ge 0 ]] && [[ "${MAKEFILE_CMDS[$i]}" == "$COMPILER"* ]]
+	# 	then
+	# 		LINK_STEP=$i
+
+	# 	fi
+
+	# 	(( i++ ))
+
+	# done
+
 	PROJECT_PATH="."
 
 	! [ -f "./Makefile" ] && printf "${COLB}Error: Makefile tools failed (./Makefile not found)${DEF}\n" && exit 1
 
-	cat ./Makefile | sed -E 's/^\t(\-|@|\+|.*\/)?make/\t$(MAKE)/g' > ./memdtc_Makefile.tmp
-
-	IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS < <( make -f ./memdtc_Makefile.tmp --debug=j -n $MAKE_RULE && printf '\0' )
-
-	rm -f ./memdtc_Makefile.tmp
+	IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS < <( make -n $MAKE_RULE && printf '\0' )
 
 	MAKEFILE_SUCCESS="y"
 
 	LINK_STEP=""
 
-	TMP_FILES=0
+	[ "$MEMDETECT_MAKEFILE_NOTHINGS" != "again" ] && MEMDETECT_MAKEFILE_NOTHINGS="n"
 
-	MAKEFILE_DEPTH=0
+	COMPILER_COUNT=0
 
-	CMDS_LEN=${#MAKEFILE_CMDS[@]}
-
-	i=0
-
-	while [[ $i -lt $CMDS_LEN ]]
+	for i in ${!MAKEFILE_CMDS[@]}
 	do
-		if [[ "${MAKEFILE_CMDS[$i]}" == "GNU Make "* ]]
-		then
-			if [[ $i -gt 0 ]]
-			then
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "${MAKEFILE_CMDS[@]:$i+6}")
-
-			else
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:$i+6}")
-				(( i-- ))
-
-			fi
-			(( CMDS_LEN = CMDS_LEN - 6 ))
-
-		elif [[ "${MAKEFILE_CMDS[$i]}" == *"child"*"PID"* ]]
-		then
-			if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
-			then
-				(( MAKEFILE_DEPTH-- ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "popd" "${MAKEFILE_CMDS[@]:$i}")
-
-			elif [ "${MAKEFILE_CMDS[$i]:0:4}" = "Live" ]
-			then
-				(( MAKEFILE_DEPTH++ ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
-
-			fi
-			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
-
-		elif [ -n "$(echo ${MAKEFILE_CMDS[$i]} | grep -E '^(\-|@|\+|.*\/)?make.*')" ]
-		then
-			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*make/echo Making target/')"
-			MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*-C //' | sed -E 's/ .*//')"
-			! [[ "$MAKEFILE_TARGET" == *"/" ]] && MAKEFILE_TARGET="${MAKEFILE_TARGET}/"
-
-		elif [ "$EXTENSION" = 'cpp' ] && [ "${MAKEFILE_CMDS[$i]:0:4}" = "c++ " ]
-		then
-			MAKEFILE_CMDS[$i]="$COMPILER ${MAKEFILE_CMDS[$i]:5}"
-
-		elif [ "$EXTENSION" = 'cpp' ]
-		then
-			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang++/$COMPILER})"
-
-		elif [ "${MAKEFILE_CMDS[$i]:0:3}" = "cc " ]
-		then
-			MAKEFILE_CMDS[$i]="$COMPILER ${MAKEFILE_CMDS[$i]:4}"
-
-		else
-			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]/clang/$COMPILER})"
-
-		fi
-
-		if [[ $i -ge 0 ]] && [[ "${MAKEFILE_CMDS[$i]}" == "$COMPILER"* ]]
+		if [[ "${MAKEFILE_CMDS[$i]}" == "$COMPILER"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "clang"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "g++"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "c++"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "cc"* ]]
 		then
 			LINK_STEP=$i
+			(( COMPILER_COUNT++ ))
+
+		elif [[ "${MAKEFILE_CMDS[$i]}" == *"Nothing to be done for"* ]]
+		then
+			[ "$MEMDETECT_MAKEFILE_NOTHINGS" != "again" ] && MEMDETECT_MAKEFILE_NOTHINGS="y"
 
 		fi
-
-		(( i++ ))
 
 	done
 
+	if [ "$LINK_STEP" = "" ] && [ "$MEMDETECT_MAKEFILE_NOTHINGS" = "y" ]
+	then
+		MEMDETECT_MAKEFILE_NOTHINGS="again"
+		make clean
+		make fclean
+		catch_makefile
+		return
+	fi
+
 	[ "$LINK_STEP" = "" ] && printf "${COLB}Error: Makefile tools failed (tried command:'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}\n" && exit 1
 
-	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT -rdynamic"
+	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
+
+	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT $GCC_FLAGS -rdynamic"
 }
 
 function exec_makefile()
 {
-	for cmd in "${MAKEFILE_CMDS[@]}"
-	do
-		[ -z "$cmd" ] && continue
-		if [ "$(echo \"$cmd\" | grep -e "$COMPILER"'*' )" != "" ]
-		then
-			GCC_CMD="$cmd $GCC_FLAGS"
-			printf "$COL%s$DEF\n" "$GCC_CMD"
-			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+	if [[ $COMPILER_COUNT -gt 1 ]]
+	then
+		make $MAKE_RULE
+		rm -f "$MAKEFILE_LINK_FILE"
 
-		else
-			type $(echo $cmd | sed -E 's/[[:space:]].*//') 1>/dev/null 2>&1
-			! [[ $? -eq 0 ]] && echo "Skipped '$cmd' because it's not recognized as command" && continue
-			[ "${cmd::4}" != "echo" ] && printf "$COL%s$DEF\n" "$cmd"
-			[ "$DRY_RUN" != "y" ] && $cmd
+	fi
 
-		fi
+	${MAKEFILE_CMDS[$LINK_STEP]}
 
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+	# for cmd in "${MAKEFILE_CMDS[@]}"
+	# do
+	# 	[ -z "$cmd" ] && continue
+	# 	if [ "$(echo \"$cmd\" | grep -e "$COMPILER"'*' )" != "" ]
+	# 	then
+	# 		GCC_CMD="$cmd $GCC_FLAGS"
+	# 		printf "$COL%s$DEF\n" "$GCC_CMD"
+	# 		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
 
-	done
+	# 	else
+	# 		type $(echo $cmd | sed -E 's/[[:space:]].*//') 1>/dev/null 2>&1
+	# 		! [[ $? -eq 0 ]] && echo "Skipped '$cmd' because it's not recognized as command" && continue
+	# 		[ "${cmd::4}" != "echo" ] && printf "$COL%s$DEF\n" "$cmd"
+	# 		[ "$DRY_RUN" != "y" ] && $cmd
+
+	# 	fi
+
+	# 	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+
+	# done
 }
 
 function exec_bin()
