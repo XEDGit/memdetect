@@ -240,7 +240,7 @@ function exec_makefile()
 
 	fi
 
-	printf "${COL}${MAKEFILE_CMDS[$LINK_STEP]}${DEF}"
+	printf "${COL}${MAKEFILE_CMDS[$LINK_STEP]}${DEF}\n"
 	[ "$DRY_RUN" != "y" ] && ${MAKEFILE_CMDS[$LINK_STEP]}
 
 	! [[ $? -eq 0 ]] && cleanup && exit 1
