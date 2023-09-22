@@ -57,75 +57,34 @@ INCL_XMALL="&& !strstr(stack[2], \"xmalloc\") && !strstr(stack[1], \"xmalloc\") 
 SRC=""
 
 HELP_MSG='
-~~ MEMDETECT HELPER: ~~
+Usage:
 
-SYNTAX:
-{} = mutually exclusive arguments
-[] = optional arguments
+./memdetect.sh { [ directory_paths | files ] [compiler_flags] [memdetect options] }
 
-USAGE:
-./memdetect [{file0 file1 ... | directory_path}] [gcc_flags] [memdetect_options]
+Description:
+	files or directory paths:
+		Only one of these types can be specified.
+		If you insert a directory path, every .c or .cpp file 
+		inside the directory is gonna be compiled.
+		To exclude one or more sub-folders use the -e option.
+		If you dont insert this parameter,
+		the script will use the Makefile tools,
+		see Makefile intergration at README.md
+	
+	compiler_flags:
+		All the options or flags which need to be passed to
+		the gcc or g++ compiler.
+		They can be specified as flag1 flag2 ... flagN.
+		Ex: -I include -g -O3
+	
+	memdetect options:
+		See Options at README.md for list.
+		They can be specified as option1 option1_arg option2 ... optionN.
+		Ex: -a arg -or -e example
 
-Options:
+The arguments are all optional, but positional, which means you have to add them in the order specified by Usage.
 
-Compiling:
-
-    -fl --flags <flag0 ... flagn>: Another way to specify options to pass to gcc for compilation
-
-    -e --exclude <folder name>: Specify a folder inside the directorypath which gets excluded from compiling
-
-Executing:
-
-    -a --args <arg0> ... <argn>: Specify arguments to run with the executable
-
-    -n --dry-run: Run the program printing every command and without executing any
-
-Fail malloc (Use one per command):
-
-    -fail <number>: Specify which malloc call should fail (return 0), 1 will fail first malloc and so on
-
-    -fail <all>: Adding this will fail all the malloc calls
-
-    -fail <loop> <start from>: Your code will be compiled and ran in a loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on. If you specify a number after loop it will start by failing start from malloc and continue. This option is useful for debugging
-
-Output manipulation:
-
-    -o --output filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
-
-    -il --include-lib: This option will include in the output the library name from where the first shown function have been called
-
-    -ie --include-ext: This option will include in the output the calls to malloc and free from outside your source files.
-    Note: Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with -fo
-
-    -ix --include-xmalloc: This option will include in the output the calls to xmalloc and xrealloc
-
-    -or --only-report: Only display the leaks report at the program exit
-
-    -nr --no-report: Does not display the leaks report at the program exit
-
-    -fi --filter-in <arg0> ... <argn>: Show only results from memdetect output if substring <arg> is found inside the output line
-
-    -fo --filter-out <arg0> ... <argn>: Filter out results from memdetect output if substring arg is found inside the output line
-
-Output files:
-
-    -p --preserve: This option will mantain the executable output files
-
-Program settings:
-
-    -+ -++: Use to run in C++ mode
-
-	-u --update: Only works if the executable is located into one of the PATH folders, updates the executable to the latest commit from github
-
-	-lb --leaks-buff <size>: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
-
-	-m --make-rule <rule>: Specify the rule to be executed when using makefile tools (no directory or file specified)
-
-	-h --help: Display help message
-
-	--add-path: adds memdetect executable to a $PATH of your choice
-
-All the compiler flags will be added to the gcc command in writing order
+Memdetect runs standard in C mode, to enable C++ mode use the -+ shorthand or -++ option.
 '
 
 function cleanup()
