@@ -234,12 +234,16 @@ function exec_makefile()
 {
 	if [[ $COMPILER_COUNT -gt 1 ]]
 	then
-		make $MAKE_RULE
+		[ "$DRY_RUN" = "y" ] && make -n $MAKE_RULE || make $MAKE_RULE
+		! [[ $? -eq 0 ]] && cleanup && exit 1
 		rm -f "$MAKEFILE_LINK_FILE"
 
 	fi
 
-	${MAKEFILE_CMDS[$LINK_STEP]}
+	printf "${COL}${MAKEFILE_CMDS[$LINK_STEP]}${DEF}"
+	[ "$DRY_RUN" != "y" ] && ${MAKEFILE_CMDS[$LINK_STEP]}
+
+	! [[ $? -eq 0 ]] && cleanup && exit 1
 
 	# for cmd in "${MAKEFILE_CMDS[@]}"
 	# do
@@ -266,11 +270,8 @@ function exec_makefile()
 function exec_bin()
 {
 	CMD=""
-	if [[ "$OSTYPE" == "darwin"* ]]
-	then
-		CMD="DYLD_INSERT_LIBRARIES=./fake_malloc.dylib "
 
-	fi
+	[[ "$OSTYPE" == "darwin"* ]] && CMD="DYLD_INSERT_LIBRARIES=./fake_malloc.dylib "
 
 	CMD+="./$MEMDETECT_OUTPUT$OUT_ARGS 2>&1"
 
