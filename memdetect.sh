@@ -6,6 +6,8 @@ COLB="\e[1;34m"
 
 ERR="\e[1;31m"
 
+WARN="\e[1;33m"
+
 FAINT="\e[2;37m"
 
 DEF="\e[0m"
@@ -113,6 +115,18 @@ More flags and documentation at:
 https://github.com/XEDGit/memdetect/blob/master/README.md
 '
 
+function error()
+{
+	printf "${ERR}Error: $1${DEF}\n"
+	cleanup
+	exit 1
+}
+
+function warning()
+{
+	printf "${WARN}Warning: $1${DEF}\n"
+}
+
 function cleanup()
 {
 	while read -rs -t 0
@@ -180,7 +194,7 @@ function makefile_v1()
 			fi
 			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
 
-		elif [ -n "$(echo ${MAKEFILE_CMDS[$i]} | grep -E '^(\-|@|\+|.*\/)?make.*')" ]
+		elif [ -n "$(echo ${MAKEFILE_CMDS[$i]} | grep -E '^(-|@|\+|.*/)?make.*')" ]
 		then
 			MAKEFILE_CMDS[$i]="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*make/echo Making target/g')"
 			MAKEFILE_TARGET="$(echo ${MAKEFILE_CMDS[$i]} | sed -E 's/.*-C //' | sed -E 's/ .*//')"
@@ -258,21 +272,20 @@ function catch_makefile()
 
 	VER="$1"
 
-	((MAKEFILE_RETRY++))
-
 	if [ -z "$MAKEFILE_OUTPUT" ]
 	then
-		! [ -f "./Makefile" ] && printf "${COLB}Error: Makefile tools failed (./Makefile not found)${DEF}\n" && exit 1
-		cat ./Makefile | sed -E 's/^\t(\-|@|\+|.*\/)?make/\t$(MAKE)/g' > ./memdtc_Makefile.tmp
+		! [ -f "./Makefile" ] && error "Makefile tools failed (./Makefile not found)"
+		! [ -f "./memdtc_Makefile.tmpZ" ] && cat ./Makefile | sed -E 's#^\t(-|@|\+|.*/)?make#\t$(MAKE)#g' > ./memdtc_Makefile.tmp
 		MAKEFILE_OUTPUT=$(make -f ./memdtc_Makefile.tmp --debug=j -n $MAKE_RULE)
 		IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS <<<"$MAKEFILE_OUTPUT"
-		if [[ $MAKEFILE_RETRY -eq 5 ]]
+		if [[ $MAKEFILE_RETRY -eq 1 ]]
 		then
-			printf "${COLB}Error: Makefile tools failed (try cleaning the project object files)${DEF}\n" && exit 1
+			error "Makefile tools failed (try cleaning the project object files)"
 
-		elif [[ "$MAKEFILE_CMDS[0]" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
+		elif [[ "${MAKEFILE_CMDS[0]}" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
 		then
-			printf "${COLB}Warning: No output from 'make -n', trying to clean project${DEF}\n"
+			((MAKEFILE_RETRY++))
+			warning "No output from 'make -n', trying to clean project"
 			MAKEFILE_OUTPUT=""
 			make clean 1>/dev/null 2>&1
 			make fclean 1>/dev/null 2>&1
@@ -285,7 +298,7 @@ function catch_makefile()
 
 	[ "$VER" = "v1" ] && makefile_v1 || makefile_v2
 
-	[ "$MAKEFILE_FAIL" = "y" ] && [ "$LINK_STEP" = "" ] && printf "${COLB}Error: Makefile tools failed (linker command not found in 'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}\n" && exit 1
+	[ "$MAKEFILE_FAIL" = "y" ] && [ "$LINK_STEP" = "" ] && error "Makefile tools failed (linker command not found in 'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}"
 
 	return 0
 }
@@ -471,7 +484,7 @@ function add_to_path()
 
 	EXE_PATH="$0"
 
-	[ -z "$EXE_PATH" ] && printf "Error: memdetect executable not found\n" && exit 1
+	[ -z "$EXE_PATH" ] && error "memdetect executable not found"
 
 	printf "Executable which will be installed: %s\n" "$EXE_PATH"
 
@@ -505,7 +518,7 @@ function add_to_path()
 
 	done
 
-	[ ! -e "$PATH_CHOICE" ] && printf "Error: '$PATH_CHOICE' directory doesn't exists\n" && exit 1
+	[ ! -e "$PATH_CHOICE" ] && error "'$PATH_CHOICE' directory doesn't exists"
 
 	printf "${COL}Copying memdetect to $PATH_CHOICE${DEF}\n"
 
@@ -534,6 +547,16 @@ function check_options()
 	return 1
 }
 
+function check_dependencies()
+{
+	type make >/dev/null 2>&1 || error "make is not installed, exiting"
+	type gcc >/dev/null 2>&1 || error "gcc is not installed, exiting"
+}
+
+! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR=""
+
+check_dependencies
+
 I=0
 
 if [[ $I -lt $ARGS_LEN ]] && ! check_options "${ARGS[$I]}"
@@ -544,7 +567,7 @@ then
 		do
 			[[ ${ARGS[$I]} == "-"* ]] && break
 
-			! [ -d "${ARGS[$I]}" ] && echo "Error: '${ARGS[$I]}' is not a directory" && exit 1
+			! [ -d "${ARGS[$I]}" ] && error "'${ARGS[$I]}' is not a directory"
 
 			PROJECT_PATH+="${ARGS[$I]%/} "
 
@@ -559,7 +582,7 @@ then
 
 			PROJECT_PATH="."
 
-			! [ -f "${ARGS[$I]}" ] && echo "Error: ${ARGS[$I]} is not a file" && exit 1
+			! [ -f "${ARGS[$I]}" ] && error "${ARGS[$I]} is not a file"
 
 			FILE_PATH+=" ${ARGS[$I]}"
 
@@ -593,7 +616,7 @@ do
 	case $arg in
 
         "-e" | "--exclude")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} flag is a memdetect flag"
 
 			(( I = I + 1 ))
 
@@ -609,7 +632,7 @@ do
         ;;
 
 		"-fo" | "--filter-out")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -635,7 +658,7 @@ do
 		;;
 
 		"-fi" | "--filter-in")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -685,7 +708,7 @@ do
 		;;
 
 		"-fail")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			NEW_VAL=${ARGS[$I + 1]}
 
@@ -708,8 +731,7 @@ do
 					MALLOC_FAIL_INDEX=-1
 
 				else
-					printf "Error: the value of --fail '$arg' is not a number, 'all' or 'loop'\n"
-					exit 1
+					error "the value of --fail '$arg' is not a number, 'all' or 'loop'"
 
 				fi
 
@@ -726,7 +748,7 @@ do
 		;;
 
         "-fl" | "--flags")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -748,7 +770,7 @@ do
 		;;
 
 		"-m" | "--make-rule")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -756,7 +778,7 @@ do
 		;;
 
 		"-a" | "--args")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -774,7 +796,7 @@ do
 		"-lb" | "--leaks-buff")
 			NEW_VAL=${ARGS[$I + 1]}
 
-			(! [[ $NEW_VAL =~ $RE ]] || check_options "$NEW_VAL") && printf "Error: the value of --leaks-buff '%s' is not a number\n" "$NEW_VAL" && exit 1
+			(! [[ $NEW_VAL =~ $RE ]] || check_options "$NEW_VAL") && error "the value of --leaks-buff '$NEW_VAL' is not a number"
 
 			ADDR_SIZE=$NEW_VAL
 		;;
@@ -788,7 +810,7 @@ do
 		;;
 
 		"--output")
-			check_options "${ARGS[$I + 1]}" && printf "Error: value '%s' for %s flag is a memdetect flag\n" "${ARGS[$I + 1]}" "${ARGS[$I]}" && exit 1
+			check_options "${ARGS[$I + 1]}" && error "value '${ARGS[$I + 1]}' for ${ARGS[$I]} option is a memdetect option"
 
 			(( I = I + 1 ))
 
@@ -843,7 +865,7 @@ do
 
 done
 
-! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR=""
+printf "${COLB}================= memdetect by XEDGit ==================\n${DEF}"
 
 { [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "${COL}Info: Missing path to project or file list.\nFalling back to Makefile tools${DEF}\n" && catch_makefile v1
 
@@ -854,10 +876,6 @@ then
 	AS_OG=""
 	[ "$DRY_RUN" != "y" ] && echo "extern void __attribute__((destructor)) malloc_hook_report();
 extern void __attribute__((constructor)) malloc_hook_pid_detect();" > ./fake_malloc_destructor.c
-
-elif ([ -n "$FILE_PATH" ] || [ "$EXTENSION" = "cpp" ])
-then
-	SRC+="./fake_malloc.o "
 
 fi
 
@@ -1158,9 +1176,6 @@ else
 	SRC+="$FILE_PATH"
 
 fi
-
-printf "$COLB================= memdetect by XEDGit ==================
-$DEF"
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
