@@ -35,6 +35,10 @@ GCC_FLAGS=""
 
 OUT_ARGS=""
 
+LINK_STEP=""
+
+MAKEFILE_RETRY=0
+
 INCL_LIB=0
 
 ADDR_SIZE=10000
@@ -64,27 +68,49 @@ Usage:
 Description:
 	files or directory paths:
 		Only one of these types can be specified.
-		If you insert a directory path, every .c or .cpp file 
+		If you insert a directory path, every .c or .cpp file
 		inside the directory is gonna be compiled.
 		To exclude one or more sub-folders use the -e option.
 		If you dont insert this parameter,
 		the script will use the Makefile tools,
 		see Makefile intergration at README.md
-	
+
 	compiler_flags:
 		All the options or flags which need to be passed to
 		the gcc or g++ compiler.
 		They can be specified as flag1 flag2 ... flagN.
 		Ex: -I include -g -O3
-	
+
 	memdetect options:
 		See Options at README.md for list.
 		They can be specified as option1 option1_arg option2 ... optionN.
-		Ex: -a arg -or -e example
+		Ex: -a argument -or -e example
 
 The arguments are all optional, but positional, which means you have to add them in the order specified by Usage.
 
 Memdetect runs standard in C mode, to enable C++ mode use the -+ shorthand or -++ option.
+
+Useful options:
+	-a | --args arg1 arg2 ... argN:
+		Use this option to feed arguments (char **argv) to the executable
+
+	-fail N:
+		Using this option will cause your Nth malloc call to fail (return 0)
+
+	-or | --only-report:
+		Display only report
+
+	-nr | --no-report:
+		Display no report
+
+	-fo | --filter-out func1 func2 .. funcN:
+		Prevents specified functions from creating memdetect output
+
+	-fi | --filter-in func1 func2 .. funcN:
+		Prevents any not specified function from creating memdetect output
+
+More flags and documentation at:
+https://github.com/XEDGit/memdetect/blob/master/README.md
 '
 
 function cleanup()
@@ -185,8 +211,14 @@ function makefile_v1()
 		fi
 
 		(( i++ ))
-
 	done
+
+	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
+
+	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT $GCC_FLAGS -rdynamic"
+
+	[[ "$OSTYPE" != "darwin"* ]] && MAKEFILE_CMDS[$LINK_STEP]+=" -ldl"
+
 	return 0
 }
 
@@ -205,15 +237,9 @@ function makefile_v2()
 				EXTENSION="cpp"
 
 			fi
-			LINK_STEP=$i
 			(( COMPILER_COUNT++ ))
 
-		elif [[ "${MAKEFILE_CMDS[$i]}" == *"Nothing to be done for"* ]]
-		then
-			[ "$MEMDETECT_MAKEFILE_NOTHINGS" != "again" ] && MEMDETECT_MAKEFILE_NOTHINGS="y"
-
 		fi
-
 	done
 
 	return 0
@@ -226,11 +252,13 @@ function catch_makefile()
 
 	MAKEFILE_SUCCESS="y"
 
-	LINK_STEP=""
-
 	[ "$MEMDETECT_MAKEFILE_NOTHINGS" != "again" ] && MEMDETECT_MAKEFILE_NOTHINGS="n"
 
 	COMPILER_COUNT=0
+
+	VER="$1"
+
+	((MAKEFILE_RETRY++))
 
 	if [ -z "$MAKEFILE_OUTPUT" ]
 	then
@@ -238,25 +266,26 @@ function catch_makefile()
 		cat ./Makefile | sed -E 's/^\t(\-|@|\+|.*\/)?make/\t$(MAKE)/g' > ./memdtc_Makefile.tmp
 		MAKEFILE_OUTPUT=$(make -f ./memdtc_Makefile.tmp --debug=j -n $MAKE_RULE)
 		IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS <<<"$MAKEFILE_OUTPUT"
+		if [[ $MAKEFILE_RETRY -eq 5 ]]
+		then
+			printf "${COLB}Error: Makefile tools failed (try cleaning the project object files)${DEF}\n" && exit 1
+
+		elif [[ "$MAKEFILE_CMDS[0]" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
+		then
+			printf "${COLB}Warning: No output from 'make -n', trying to clean project${DEF}\n"
+			MAKEFILE_OUTPUT=""
+			make clean 1>/dev/null 2>&1
+			make fclean 1>/dev/null 2>&1
+			catch_makefile v1
+			return
+
+		fi
 
 	fi
 
-	[ "$1" = "v1" ] && makefile_v1 || makefile_v2
+	[ "$VER" = "v1" ] && makefile_v1 || makefile_v2
 
-	if [ "$LINK_STEP" = "" ] && [ "$MEMDETECT_MAKEFILE_NOTHINGS" = "y" ]
-	then
-		MEMDETECT_MAKEFILE_NOTHINGS="again"
-		make clean
-		make fclean
-		catch_makefile v2
-		return 0
-	fi
-
-	[ "$LINK_STEP" = "" ] && printf "${COLB}Error: Makefile tools failed (tried command:'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}\n" && exit 1
-
-	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
-
-	[ "$MAKEFILE_FAIL" != "y" ] && MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT $GCC_FLAGS -rdynamic"
+	[ "$MAKEFILE_FAIL" = "y" ] && [ "$LINK_STEP" = "" ] && printf "${COLB}Error: Makefile tools failed (linker command not found in 'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}\n" && exit 1
 
 	return 0
 }
@@ -297,13 +326,45 @@ function exec_makefile()
 
 		fi
 		printf "${COL}${MAKEFILE_CMDS[$LINK_STEP]}${DEF}\n"
-		[ "$DRY_RUN" != "y" ] && ${MAKEFILE_CMDS[$LINK_STEP]}
+		[ "$DRY_RUN" != "y" ] && bash -c "${MAKEFILE_CMDS[$LINK_STEP]}"
 
 	fi
 
 	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
 
 	return 0
+}
+
+function compile_fake_malloc()
+{
+	if [[ "$OSTYPE" == "darwin"* ]]
+	then
+		[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC ./fake_malloc.c -o ./fake_malloc.dylib -DONLY_SOURCE="$ONLY_SOURCE" -DINCL_LIB="$INCL_LIB" -DADDR_ARR_SIZE="$ADDR_SIZE" -DMALLOC_FAIL_INDEX="$COUNTER"
+		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+		[ "$DRY_RUN" != "y" ] && gcc ./fake_malloc_destructor.c -c -o ./fake_malloc.o
+		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+
+	else
+		[ "$DRY_RUN" != "y" ] && gcc "./fake_malloc.c" -c -o "./fake_malloc.o" -DINCL_LIB="$INCL_LIB" -DONLY_SOURCE="$ONLY_SOURCE" -DADDR_ARR_SIZE="$ADDR_SIZE" -DMALLOC_FAIL_INDEX="$COUNTER"
+		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+
+	fi
+}
+
+function compile_bin()
+{
+	if [ "$MAKEFILE_SUCCESS" = "y" ]
+	then
+		exec_makefile
+
+	else
+		GCC_CMD="$COMPILER $SRC ./fake_malloc.o -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS"
+		[[ "$OSTYPE" != "darwin"* ]] && GCC_CMD+=" -ldl"
+		printf "$COL%s$DEF\n" "$GCC_CMD"
+		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
+		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+
+	fi
 }
 
 function exec_bin()
@@ -349,104 +410,21 @@ function loop()
 
 		ask_loop_continue || break
 
-		[ "$DRY_RUN" != "y" ] && gcc "./fake_malloc.c" -c -o "./fake_malloc.o" -DINCL_LIB="$INCL_LIB" -DONLY_SOURCE="$ONLY_SOURCE" -DADDR_ARR_SIZE="$ADDR_SIZE" -DMALLOC_FAIL_INDEX="$COUNTER"
+		compile_fake_malloc
 
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-		if [ "$MAKEFILE_SUCCESS" = "y" ]
-		then
-			exec_makefile
-
-		else
-			GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -ldl"
-			printf "$COL%s$DEF\n" "$GCC_CMD"
-			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
-			! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-		fi
+		compile_bin
 
 		exec_bin
 
-	done
-}
-
-function loop_osx()
-{
-	(( COUNTER = COUNTER - 1 ))
-
-	CONTINUE=""
-
-	while [[ $COUNTER -ge 0 ]]
-	do
-		(( COUNTER = COUNTER + 1 ))
-
-		ask_loop_continue || break
-
-		[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC ./fake_malloc.c -o ./fake_malloc.dylib -DONLY_SOURCE="$ONLY_SOURCE" -DINCL_LIB="$INCL_LIB" -DADDR_ARR_SIZE="$ADDR_SIZE" -DMALLOC_FAIL_INDEX="$COUNTER"
-
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-		[ "$DRY_RUN" != "y" ] && gcc ./fake_malloc_destructor.c -c -o ./fake_malloc.o
-
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-		if [ "$MAKEFILE_SUCCESS" = "y" ]
-		then
-			exec_makefile
-
-		else
-			GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS"
-			printf "$COL%s$DEF\n" "$GCC_CMD"
-			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
-			! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-		fi
-		exec_bin
 	done
 }
 
 function run()
 {
-	[ "$DRY_RUN" != "y" ] && gcc -c "./fake_malloc.c" -o "./fake_malloc.o" -DONLY_SOURCE="$ONLY_SOURCE" -DADDR_ARR_SIZE="$ADDR_SIZE" -DINCL_LIB="$INCL_LIB" -DMALLOC_FAIL_INDEX="$MALLOC_FAIL_INDEX"
 
-	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
+	compile_fake_malloc
 
-	if [ "$MAKEFILE_SUCCESS" = "y" ]
-	then
-		exec_makefile
-
-	else
-		GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS -ldl"
-		printf "$COL%s$DEF\n" "$GCC_CMD"
-		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-	fi
-
-	exec_bin
-}
-
-function run_osx()
-{
-	[ "$DRY_RUN" != "y" ] && gcc -shared -fPIC ./fake_malloc.c -o ./fake_malloc.dylib -DONLY_SOURCE="$ONLY_SOURCE" -DINCL_LIB="$INCL_LIB" -DADDR_ARR_SIZE="$ADDR_SIZE" -DMALLOC_FAIL_INDEX="$MALLOC_FAIL_INDEX"
-
-	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-	[ "$DRY_RUN" != "y" ] && gcc ./fake_malloc_destructor.c -c -o ./fake_malloc.o
-
-	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-	if [ "$MAKEFILE_SUCCESS" = "y" ]
-	then
-		exec_makefile
-
-	else
-		GCC_CMD="$COMPILER $SRC -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS"
-		printf "$COL%s$DEF\n" "$GCC_CMD"
-		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
-		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
-
-	fi
+	compile_bin
 
 	exec_bin
 }
@@ -1174,14 +1152,7 @@ EOF"
 
 if [ -z "$FILE_PATH" ]
 then
-	if [[ "$OSTYPE" == "darwin"* ]]
-	then
-		SRC+=$(eval "find $PROJECT_PATH -name '*.$EXTENSION' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
-
-	else
-		SRC+=$(eval "find $PROJECT_PATH -name '*.$EXTENSION' $EXCLUDE_FIND" | tr '\n' ' ')
-
-	fi
+	SRC+=$(eval "find $PROJECT_PATH -name '*.$EXTENSION' $EXCLUDE_FIND" | grep -v fake_malloc.c | tr '\n' ' ')
 
 else
 	SRC+="$FILE_PATH"
@@ -1193,24 +1164,11 @@ $DEF"
 
 if [ -z "$MALLOC_FAIL_LOOP" ]
 then
-	if [[ "$OSTYPE" == "darwin"* ]]
-	then
-		run_osx
-
-	else
-		run
-
-	fi
+	COUNTER=$MALLOC_FAIL_INDEX
+	run
 
 else
-	if [[ "$OSTYPE" == "darwin"* ]]
-	then
-		loop_osx
-
-	else
-		loop
-
-	fi
+	loop
 	printf "${COL}\nExiting\n${DEF}"
 
 fi
