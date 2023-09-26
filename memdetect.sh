@@ -421,13 +421,19 @@ function exec_bin()
 
 function ask_loop_continue()
 {
-	printf "\e[1mPress any key to run failing malloc number %s (-fail %s) or 'q' to quit:$DEF" "$COUNTER" "$COUNTER"
+	printf "____________________________________________\n\e[1mPress any key to run -fail %s or 'q' to quit:$DEF" "$COUNTER"
 
 	read -srn1 CONTINUE
 
-	[ "$CONTINUE" = "q" ] && return 1
+	while read -rs -t 0
+	do
+		read -rsn1
+
+	done
 
 	[ ! "$CONTINUE" = $'\n' ] && printf "\n"
+
+	[ "$CONTINUE" = "q" ] && return 1
 
 	return 0
 }
@@ -1108,7 +1114,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		malloc_count++;
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			printf(COLB \"(MALLOC_FAIL)\t %s -> %s malloc num %d failed\n\" DEF, stack[3], stack[2], malloc_fail);
+			printf(COLB \"(MALLOC_FAIL)\t %s -> %s malloc num %d failed\" DEF \"\n\", stack[3], stack[2], malloc_fail);
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
