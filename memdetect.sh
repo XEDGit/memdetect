@@ -23,9 +23,9 @@ COMPILER=gcc
 OPTIONS=("-fl" "--flags" "-fail" "-d" "-dir" "--directory" "-f" "--files" "-e"   \
 "--exclude" "-ie" "--include-external" "-il" "--include-libs" "--output"  \
 "-fo" "--filter-out" "-fi" "--filter-in" "-lb" "-leaks-buff" "-p" "--preserve" \
-"-nr" "--no-report" "-or" "--only-report" "-a" "--args" "-h" "--help" "--add-path" \
+"-nr" "--no-report" "-s" "--show-calls" "-a" "--args" "-h" "--help" "--add-path" \
 "-ix" "--include-xmalloc" "-u" "--update" "-+" "-++" "-cl" "--clean" \
-"-n" "--dry-run" "-m" "--make-rule")
+"-n" "--dry-run" "-m" "--make-rule" "-v" "--verbose")
 
 RE='^[0-9]+$'
 
@@ -43,6 +43,8 @@ MAKEFILE_RETRY=0
 
 INCL_LIB=0
 
+VERBOSE=0
+
 ADDR_SIZE=10000
 
 ONLY_SOURCE=1
@@ -56,6 +58,8 @@ MALLOC_FAIL_INDEX=0
 AS_COMM=""
 
 AS_FUNC=""
+
+ONLY_REPORT="// "
 
 AS_OG="og_"
 
@@ -96,6 +100,12 @@ Useful options:
 	-a | --args arg1 arg2 ... argN:
 		Use this option to feed arguments (char **argv) to the executable
 
+	-s | --show-calls:
+		Output data about every malloc or free call at runtime
+
+	-v | --verbose:
+		Show commands executed for compilation and running
+
 	-fail N:
 		Using this option will cause your Nth malloc call to fail (return 0)
 
@@ -117,14 +127,20 @@ https://github.com/XEDGit/memdetect/blob/master/README.md
 
 function error()
 {
-	printf "${ERR}Error: $1${DEF}\n"
+	[[ $VERBOSE -eq 1 ]] && printf "${ERR}Error: $1${DEF}\n"
 	cleanup
 	exit 1
 }
 
 function warning()
 {
-	printf "${WARN}Warning: $1${DEF}\n"
+	[[ $VERBOSE -eq 1 ]] && printf "${WARN}Warning: $1${DEF}\n"
+}
+
+function printcol()
+{
+	[[ $VERBOSE -eq 0 ]] && [ "$DRY_RUN" != "y" ] && return
+	[ -z "$2" ] && printf "${COL}$1${DEF}\n" || printf "${COLB}$1${DEF}\n"
 }
 
 function cleanup()
@@ -154,7 +170,7 @@ function cleanup()
 
 function makefile_v1()
 {
-	echo "Approach 'manual':"
+	printcol "Approach 'manual':"
 
 	TMP_FILES=0
 
@@ -238,7 +254,7 @@ function makefile_v1()
 
 function makefile_v2()
 {
-	echo "Approach 'native':"
+	printcol "Approach 'native':"
 
 	for i in ${!MAKEFILE_CMDS[@]}
 	do
@@ -246,7 +262,7 @@ function makefile_v2()
 		then
 			if [[ "${MAKEFILE_CMDS[$i]}" == "clang++"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "g++"* ]] || [[ "${MAKEFILE_CMDS[$i]}" == "c++"* ]] && [ "$EXTENSION" = "c" ]
 			then
-				echo "C++ files detected, defaulting to -++ option"
+				printcol "C++ files detected, defaulting to -++ option"
 				COMPILER="g++"
 				EXTENSION="cpp"
 
@@ -275,15 +291,17 @@ function catch_makefile()
 	if [ -z "$MAKEFILE_OUTPUT" ]
 	then
 		! [ -f "./Makefile" ] && error "Makefile tools failed (./Makefile not found)"
-		! [ -f "./memdtc_Makefile.tmpZ" ] && cat ./Makefile | sed -E 's#^\t(-|@|\+|.*/)?make#\t$(MAKE)#g' > ./memdtc_Makefile.tmp
+		! [ -f "./memdtc_Makefile.tmp" ] && cat ./Makefile | sed -E 's#^\t(-|@|\+|.*/)?make#\t$(MAKE)#g' > ./memdtc_Makefile.tmp
 		MAKEFILE_OUTPUT=$(make -f ./memdtc_Makefile.tmp --debug=j -n $MAKE_RULE)
 		IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS <<<"$MAKEFILE_OUTPUT"
-		if [[ $MAKEFILE_RETRY -eq 1 ]]
-		then
-			error "Makefile tools failed (try cleaning the project object files)"
 
-		elif [[ "${MAKEFILE_CMDS[0]}" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
+		if [[ "${MAKEFILE_CMDS[0]}" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
 		then
+			if [[ $MAKEFILE_RETRY -eq 1 ]]
+			then
+				error "Makefile tools failed (try cleaning the project object files)"
+
+			fi
 			((MAKEFILE_RETRY++))
 			warning "No output from 'make -n', trying to clean project"
 			MAKEFILE_OUTPUT=""
@@ -313,19 +331,23 @@ function exec_makefile()
 		if [ "$(echo \"$cmd\" | grep -e "$COMPILER"'*' )" != "" ]
 		then
 			GCC_CMD="$cmd$GCC_FLAGS"
-			printf "$COL%s$DEF\n" "$GCC_CMD"
+			printcol "$GCC_CMD"
 			[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
 
 		else
 			[ "${cmd::4}" = "echo" ] && continue
 			type $(echo $cmd | sed -E 's/[[:space:]].*//') 1>/dev/null 2>&1
-			! [[ $? -eq 0 ]] && echo "Skipped '$cmd' because it's not recognized as command" && continue
-			printf "$COL%s$DEF\n" "$cmd"
-			[ "$DRY_RUN" != "y" ] && eval "$cmd"
+			! [[ $? -eq 0 ]] && printcol "Skipped '$cmd' because it's not recognized as command\n" && continue
+			printcol "$cmd"
+			if [ "$DRY_RUN" != "y" ]
+			then
+				[[ $VERBOSE -eq 1 ]] && eval "$cmd" || eval "$cmd" 1>/dev/null 2>&1
+
+			fi
 
 		fi
 
-		! [[ $? -eq 0 ]] && MAKEFILE_FAIL="y" && pushd -0 && dirs -c && echo "Approach 'manual' failed." && break
+		! [[ $? -eq 0 ]] && MAKEFILE_FAIL="y" && pushd -0 && dirs -c && printcol "Approach 'manual' failed." && break
 	done
 
 	if	[ "$MAKEFILE_FAIL" = "y" ]
@@ -333,12 +355,12 @@ function exec_makefile()
 		catch_makefile v2
 		if [[ $COMPILER_COUNT -gt 1 ]]
 		then
-			[ "$DRY_RUN" = "y" ] && make -f ./memdtc_Makefile.tmp -n $MAKE_RULE || make -f ./memdtc_Makefile.tmp $MAKE_RULE
+			[[ $VERBOSE -eq 1 ]] && make -f ./memdtc_Makefile.tmp ${DRY_RUN:+"-n"} $MAKE_RULE || make -f ./memdtc_Makefile.tmp ${DRY_RUN:+"-n"} $MAKE_RULE 1>/dev/null 2>&1
 			! [[ $? -eq 0 ]] && cleanup && exit 1
 			rm -f "$MAKEFILE_LINK_FILE"
 
 		fi
-		printf "${COL}${MAKEFILE_CMDS[$LINK_STEP]}${DEF}\n"
+		printcol "${MAKEFILE_CMDS[$LINK_STEP]}"
 		[ "$DRY_RUN" != "y" ] && bash -c "${MAKEFILE_CMDS[$LINK_STEP]}"
 
 	fi
@@ -373,7 +395,7 @@ function compile_bin()
 	else
 		GCC_CMD="$COMPILER $SRC ./fake_malloc.o -rdynamic -o ./$MEMDETECT_OUTPUT$GCC_FLAGS"
 		[[ "$OSTYPE" != "darwin"* ]] && GCC_CMD+=" -ldl"
-		printf "$COL%s$DEF\n" "$GCC_CMD"
+		printcol "$GCC_CMD"
 		[ "$DRY_RUN" != "y" ] && bash -c "$GCC_CMD 2>&1"
 		! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
 
@@ -388,7 +410,7 @@ function exec_bin()
 
 	CMD+="./$MEMDETECT_OUTPUT$OUT_ARGS 2>&1"
 
-	printf "${COLB}${CMD}:${DEF}\n"
+	printcol "${CMD}:" "B"
 
 	[ "$DRY_RUN" != "y" ] && bash -c "$CMD"
 
@@ -488,7 +510,7 @@ function add_to_path()
 
 	printf "Executable which will be installed: %s\n" "$EXE_PATH"
 
-	echo "In which path do you want to install it?"
+	echo "In which directory do you want to install it?"
 
 	for VAL in $PATH_ARR
 	do
@@ -699,6 +721,10 @@ do
 			PRESERVE=1
 		;;
 
+		"-v" | "--verbose")
+			VERBOSE=1
+		;;
+
 		"-cl" | "--clean")
 			unset PRESERVE
 
@@ -764,9 +790,9 @@ do
 		;;
 
 		"-n" | "--dry-run")
-			printf "${COLB}Executing dry run...$DEF\n"
-
 			DRY_RUN="y"
+
+			printcol "Executing dry run..." "B"
 		;;
 
 		"-m" | "--make-rule")
@@ -805,8 +831,8 @@ do
 			NO_REPORT="// "
 		;;
 
-		"-or" | "--only-report")
-			ONLY_REPORT="// "
+		"-s" | "--show-calls")
+			ONLY_REPORT=""
 		;;
 
 		"--output")
@@ -831,9 +857,9 @@ do
 
 			fi
 
-			[ "$DRY_RUN" != "y" ] && touch "${ARGS[$I]}" || (printf "Failed creating output file\n" && exit 1)
+			[ "$DRY_RUN" != "y" ] && touch "${ARGS[$I]}" || error "Failed creating output file"
 
-			[ "$DRY_RUN" != "y" ] && echo "Output file ready!"
+			[ "$DRY_RUN" != "y" ] && printcol "Output file ready!"
 
 			[ "$DRY_RUN" != "y" ] && exec 1>"${ARGS[$I]}"
 
@@ -865,9 +891,9 @@ do
 
 done
 
-printf "${COLB}================= memdetect by XEDGit ==================\n${DEF}"
+printf "${COLB}================= memdetect by XEDGit ==================${DEF}\n"
 
-{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printf "${COL}Info: Missing path to project or file list.\nFalling back to Makefile tools${DEF}\n" && catch_makefile v1
+{ [ -z "$FILE_PATH" ] && [ -z "$PROJECT_PATH" ]; } && printcol "Info: Missing path to project or file list.\nFalling back to Makefile tools" && catch_makefile v1
 
 if [[ "$OSTYPE" == "darwin"* ]]
 then
@@ -1184,7 +1210,7 @@ then
 
 else
 	loop
-	printf "${COL}\nExiting\n${DEF}"
+	printcol "\nExiting\n"
 
 fi
 
