@@ -83,6 +83,10 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
  - #### Output manipulation:
 
+   - `-s | --show-calls`: Print info about the malloc or free calls
+
+   - `-v | --verbose`: This option will cause memdetect to print the compilation commands
+
    - `-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
    - `-il | --include-lib`: This option will include in the output the library name from where the first shown function have been called
@@ -91,8 +95,6 @@ The arguments are all **optional**, but **positional**, which means you have to 
    *Watch out, some external functions will create confilct and crash your program if you intercept them, try to filter them out with `-fo`, but in most cases this option is overkill anyway*
 
    - `-ix | --include-xmalloc`: This option will include in the output the calls to xmalloc and xrealloc
-
-   - `-or | --only-report`: Only display the leaks report at the program exit
 
    - `-nr | --no-report`: Doesn't display the leaks report at the program exit
 
@@ -190,7 +192,7 @@ int main(void)
 
 ```console
 # With memdetect in $PATH
-xedgit@pc:~ $ memdetect example.c -fail 3
+xedgit@pc:~ $ memdetect example.c -s -fail 3
 ```
 
     ================= memdetect by XEDGit ==================
@@ -216,4 +218,4 @@ In this case the leak is str1, allocated using malloc in the main() function, st
 
    - There's no wrapper for calloc and realloc functions
 
-   - This program is designed for a developement enviroment, it is **not** intended to be run with root privileges and an unprivileged user should be prevented from being able to do so
+   - This program is designed for a developement enviroment, it is **not** intended to be run with root privileges and an unprivileged user should be prevented from being able to do so on a production system
