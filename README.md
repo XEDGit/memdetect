@@ -1,7 +1,8 @@
-Memdetect is a cross-platform shell script to compile and run your C or C++ project with a wrapper of malloc and free, which will help you understand your memory-management and find memory leaks.
-
-
-It can also fail targeted malloc() calls at runtime, for military-grade stability!
+Memdetect is a shell script to check your C or C++ project's memory leaks  
+  
+It can also:
+ - show information about malloc and free calls at runtime
+ - fail targeted malloc() calls at runtime, for military-grade stability!
 
 ## Platforms:
 
@@ -36,12 +37,12 @@ from now on you can just type `memdetect` in your terminal from any folder in th
  
 ### Makefile integration:
 
-The integrated Makefile tools will read and execute your current folder Makefile's first rule (or the one specified via -m)  
-To run in makefile mode do not specify any directory or file before the memdetect options
+The integrated Makefile tools will read and execute your current folder Makefile's first rule (or the one specified via the -m option)  
+To run in makefile mode do **not** specify any directory or file before the other options
 ```shell
 memdetect # You can optionally add gcc/memdetect options
 ```
-If you are having problems, try cleaning your target files, for example using `make fclean`
+*If you are encountering problems, try cleaning your target files, for example using `make fclean`*
 
 ## Run:
 
@@ -60,20 +61,23 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
 ### Options:
 
- - #### Compiling:
+ - #### Compilation:
+
+   - `-v | --verbose`: This option will cause memdetect to print the compilation commands
+
+   - `-n | --dry-run`: Run the compilation process printing every command (like option -v) but without executing any
 
    - `-fl | --flags <flag0> ... <flagn>`: Another way to specify options to pass to gcc for compilation
    
    - `-e | --exclude <folder name>`: Specify a sub-folder inside one of the `directory_paths` which is excluded from compilation
+  
+   - `-m | --make-rule <rule>`: Specify the rule to be executed when using makefile tools (no directory or file specified)
 
- - #### Executing:
+ - #### Execution:
    
    - `-a | --args <arg0> ... <argn>`: Specify arguments to run the executable with, use when your program reads the argv
 
-   - `-n | --dry-run`: Run the program printing every command and without executing any
-
-
- - #### Fail malloc (Use one per command):
+ - #### Fail malloc call (Use only one):
 
    - `-fail <number>`: Specify which malloc call should fail (return 0), 1 will fail first malloc, 2 the second and so on
 
@@ -81,11 +85,8 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
    - `-fail <loop> [<start>]`: This mode puts `memdetect -fail` in an infinite loop, failing the 1st malloc call on the 1st execution, the 2nd on the 2nd execution and so on incrementally. If you specify a number after `loop` it will start by failing the malloc call number `start` then `start + 1` and so on.
 
- - #### Output manipulation:
-
-   - `-s | --show-calls`: Print info about the malloc or free calls
-
-   - `-v | --verbose`: This option will cause memdetect to print the compilation commands
+ - #### `-s | --show-calls`: prints informations about malloc and free calls at runtime
+ - #### Modify `-s` behaviour: 
 
    - `-o | --output` filename: Removed for compatibility reasons, to archieve the same effect use stdout redirection with the terminal (memdetect ... > outfile)
 
@@ -96,25 +97,21 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
    - `-ix | --include-xmalloc`: This option will include in the output the calls to xmalloc and xrealloc
 
-   - `-nr | --no-report`: Doesn't display the leaks report at the program exit
-
    - `-fi | --filter-in <arg0> ... <argn>`: Show only results from memdetect output if substring `<arg>` is found inside the recent function stack
 
    - `-fo | --filter-out <arg0> ... <argn>`: Filter out results from memdetect output if substring `<arg>` is found inside the recent function stack
 
- - #### Output files:
-
-   - `-p | --preserve`: This option will mantain the executable output files
-
- - #### Program settings:
+ - #### memdetect settings:
 
     - `-+ | -++`: Use to run in C++ mode
+  
+    - `-nr | --no-report`: Doesn't display the leaks report at the program exit
+  
+    - `-p | --preserve`: This option will mantain the executable output files
 
     - `-u | --update`: Only works if memdetect is installed, updates the installed executable to the latest commit from github
 
    - `-lb | --leaks-buff <size>`: Specify the size of the leaks report buffer, standard is 10000 (use only if the output tells you to do so)
-
-   - `-m | --make-rule <rule>`: Specify the rule to be executed when using makefile tools (no directory or file specified)
      
    - `-h | --help`: Display help message
  
@@ -141,13 +138,34 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
     memdetect src lib -I include -I lib/include
 
-#### Run with options
+#### Run with gcc options
+
+    memdetect shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include
+
+#### Run using Makefile tools only adding memdetect options
+
+    memdetect -fail loop --filter-out rl_ -e examples
+
+#### Run using Makefile tools adding gcc and memdetect options
+
+    memdetect -O3 -fail loop --filter-out rl_ -e examples
+
+#### Run with gcc and memdetect options
 
     memdetect shell/ -lreadline -L~/.brew/opt/readline/lib -I~/.brew/opt/readline/include -fail loop --filter-out rl_ -e examples
 
 ## Understanding the output:
 
-### Reference:
+### Standard:
+ - **Malloc report** this is a report of how many malloc and free calls have been executed during runtime
+ - **Leaks at exit** this will contain every leaked address, the printed informations, in order, are:
+   - the call index for every leaked address, which is the same as the one printed at runtime using **-s**
+   - the name of the function which allocated memory at that address
+   - the size of the allocation in bytes
+   - the address of the allocation
+   - the content, only if the data is readable in ASCII 
+
+### Reference (-s):
 
 All the output is printed following your program's runtime, so your output will be included in memdetect output and can be used as reference to distinguish between similar malloc calls, adding placeholder `printf` calls to your code can reveal itself very useful
 
@@ -157,13 +175,14 @@ All the output is printed following your program's runtime, so your output will 
  - `(FREE_WRAPPER)`:
     - for each free call, this is printed on the stdout, with the last two functions in the stack and the address freed
 
+### Reference (-fail)
+
  - `(MALLOC_FAIL)`:
     - when a malloc call gets failed by the `-fail` option this will be printed on the stdout with the last two functions in the stack
 
+### Errors
  - `(MALLOC_ERROR)`:
-    - when this is printed it means the program didn't have enough stack size for storing informations about your malloc calls, use the option `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this
-
-After your program exits a **Leaks at exit** section will be printed, it will contains the call index for every leaked address, which is the same as the one printed at runtime. 
+    - when this is printed it means the program didn't have enough stack size for storing informations about your malloc calls, use the option `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this 
 
 ### Example:
 
@@ -188,7 +207,7 @@ int main(void)
 }
 ```
 
-#### Output:
+#### `-s|--show-calls` output:
 
 ```console
 # With memdetect in $PATH
