@@ -200,12 +200,16 @@ function makefile_v1()
 			if [ "${MAKEFILE_CMDS[$i]:0:4}" = "Reap" ]
 			then
 				(( MAKEFILE_DEPTH-- ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "popd" "${MAKEFILE_CMDS[@]:$i}")
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i}" "popd" "${MAKEFILE_CMDS[@]:$i}")
+				(( i++ ))
+				(( CMDS_LEN++ ))
 
 			elif [ "${MAKEFILE_CMDS[$i]:0:4}" = "Live" ]
 			then
 				(( MAKEFILE_DEPTH++ ))
-				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i-1}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
+				MAKEFILE_CMDS=("${MAKEFILE_CMDS[@]:0:$i}" "pushd $MAKEFILE_TARGET" "${MAKEFILE_CMDS[@]:$i}")
+				(( i++ ))
+				(( CMDS_LEN++ ))
 
 			fi
 			MAKEFILE_CMDS=( "${MAKEFILE_CMDS[@]/${MAKEFILE_CMDS[$i]}}" )
@@ -242,6 +246,23 @@ function makefile_v1()
 
 		(( i++ ))
 	done
+
+	if [[ "${MAKEFILE_CMDS[0]}" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
+	then
+		if [[ $MAKEFILE_RETRY -eq 1 ]]
+		then
+			error "Makefile tools failed (try cleaning the project object files)"
+
+		fi
+		((MAKEFILE_RETRY++))
+		warning "No output from 'make -n', trying to clean project"
+		unset MAKEFILE_OUTPUT
+		make clean 1>/dev/null 2>&1
+		make fclean 1>/dev/null 2>&1
+		catch_makefile v1
+		return
+
+	fi
 
 	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
 
@@ -294,23 +315,6 @@ function catch_makefile()
 		! [ -f "./memdtc_Makefile.tmp" ] && cat ./Makefile | sed -E 's#^\t(-|@|\+|.*/)?make#\t$(MAKE)#g' > ./memdtc_Makefile.tmp
 		MAKEFILE_OUTPUT=$(make -f ./memdtc_Makefile.tmp --debug=j -n $MAKE_RULE)
 		IFS=$'\n' read -r -d '' -a MAKEFILE_CMDS <<<"$MAKEFILE_OUTPUT"
-
-		if [[ "${MAKEFILE_CMDS[0]}" == *"Nothing to be done for"* ]] && [[ ${#MAKEFILE_CMDS[@]} -eq 1 ]]
-		then
-			if [[ $MAKEFILE_RETRY -eq 1 ]]
-			then
-				error "Makefile tools failed (try cleaning the project object files)"
-
-			fi
-			((MAKEFILE_RETRY++))
-			warning "No output from 'make -n', trying to clean project"
-			MAKEFILE_OUTPUT=""
-			make clean 1>/dev/null 2>&1
-			make fclean 1>/dev/null 2>&1
-			catch_makefile v1
-			return
-
-		fi
 
 	fi
 
