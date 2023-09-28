@@ -127,14 +127,14 @@ https://github.com/XEDGit/memdetect/blob/master/README.md
 
 function error()
 {
-	[[ $VERBOSE -eq 1 ]] && printf "${ERR}Error: $1${DEF}\n"
+	printf "${ERR}Error: $1${DEF}\n"
 	cleanup
 	exit 1
 }
 
 function warning()
 {
-	[[ $VERBOSE -eq 1 ]] && printf "${WARN}Warning: $1${DEF}\n"
+	printf "${WARN}Warning: $1${DEF}\n"
 }
 
 function printcol()
