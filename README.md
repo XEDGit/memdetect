@@ -237,4 +237,4 @@ In this case the leak is str1, allocated using malloc in the main() function, st
 
    - There's no wrapper for calloc and realloc functions
 
-   - This program is designed for a developement enviroment, it is **not** intended to be run with root privileges and an unprivileged user should be prevented from being able to do so on a production system
+   - This program is designed for a development enviroment, it is **not** intended to be run with root privileges and an unprivileged user should be prevented from being able to do so on a production system
