@@ -417,11 +417,11 @@ function exec_bin()
 
 	[[ "$OSTYPE" == "darwin"* ]] && CMD="DYLD_INSERT_LIBRARIES=./fake_malloc.dylib "
 
-	CMD+="./$MEMDETECT_OUTPUT$OUT_ARGS 2>&1"
+	CMD+="./$MEMDETECT_OUTPUT$OUT_ARGS"
 
 	printcol "${CMD}:" "B"
 
-	[ "$DRY_RUN" != "y" ] && bash -c "$CMD"
+	[ "$DRY_RUN" != "y" ] && bash -c "$CMD" 2>&1
 
 	! [[ $? -eq 0 ]] && [ -z "$MALLOC_FAIL_LOOP" ] && [ "$DRY_RUN" != "y" ] && cleanup && exit 1
 
