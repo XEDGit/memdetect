@@ -128,7 +128,9 @@ https://github.com/XEDGit/memdetect/blob/master/README.md
 function error()
 {
 	printf "${ERR}Error: $1${DEF}\n"
+
 	cleanup
+
 	exit 1
 }
 
@@ -139,8 +141,11 @@ function warning()
 
 function printcol()
 {
-	[[ $VERBOSE -eq 0 ]] && [ "$DRY_RUN" != "y" ] && return
+	[[ $VERBOSE -eq 0 ]] && [ "$DRY_RUN" != "y" ] && return 0
+
 	[ -z "$2" ] && printf "${COL}$1${DEF}\n" || printf "${COLB}$1${DEF}\n"
+
+	return 0
 }
 
 function cleanup()
@@ -341,7 +346,7 @@ function exec_makefile()
 		else
 			[ "${cmd::4}" = "echo" ] && continue
 			type $(echo $cmd | sed -E 's/[[:space:]].*//') 1>/dev/null 2>&1
-			! [[ $? -eq 0 ]] && printcol "Skipped '$cmd' because it's not recognized as command\n" && continue
+			! [[ $? -eq 0 ]] && printcol "Skipped '$cmd' because it's not recognized as command" && continue
 			printcol "$cmd"
 			if [ "$DRY_RUN" != "y" ]
 			then
@@ -476,11 +481,13 @@ function run()
 
 function check_update()
 {
-	PATH_TO_BIN=$(which memdetect) || return
+	PATH_TO_BIN=$(which memdetect) || error 'memdetect not found in $PATH'
 
 	printf "curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh\n"
 
-	[ "$DRY_RUN" != "y" ] && curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null || return
+	[ "$DRY_RUN" != "y" ] && curl https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh >tmp 2>/dev/null
+
+	! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && error "failed to download update"
 
 	DIFF=$(diff tmp $PATH_TO_BIN)
 
@@ -490,13 +497,15 @@ function check_update()
 		if [ -w $(dirname $PATH_TO_BIN) ]
 		then
 			printf "mv tmp $PATH_TO_BIN\n"
-			[ "$DRY_RUN" != "y" ] && mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF"
+			[ "$DRY_RUN" != "y" ] && mv tmp $PATH_TO_BIN && printcol "Updated memdetect, relaunch it!" "B"
 
 		else
 			printf "sudo mv tmp $PATH_TO_BIN\n"
-			[ "$DRY_RUN" != "y" ] && (sudo mv tmp $PATH_TO_BIN && printf "${COLB}Updated memdetect, relaunch it!\n$DEF") || (printf "Error gaining privileges\n" && rm tmp)
+			[ "$DRY_RUN" != "y" ] && sudo mv tmp $PATH_TO_BIN && printcol "Updated memdetect, relaunch it!"
+			! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && rm -f tmp && error "failed gaining privileges"
 
 		fi
+		rm -f tmp
 		exit 0
 
 	else
