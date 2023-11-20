@@ -50,14 +50,12 @@ Memdetect runs standard in **C mode**, to enable **C++ mode** use the `-+` optio
 
 ### Usage:
 
-    ./memdetect.sh { [ directory_paths | files ] [compiler_flags] [memdetect options] }
+    ./memdetect.sh { [ directory_paths | files ] } [compiler_flags] [memdetect options]
 
 #### Description:
- 1. **files** or **directory paths**: Only one of these types can be specified. If you insert a directory path, every .c or .cpp file inside the directory is gonna be compiled, to exclude one or more sub-folders use the `-e` option, if you don't insert this parameter the script will use the Makefile tools, see **Makefile intergration**
+ 1. **files** or **directory paths**: Only one of these types can be specified. If you insert a directory path, every .c or .cpp file inside the directory is gonna be compiled, to exclude one or more sub-folders use the `-e` option, if you don't insert this parameter the script will use the Makefile tools, see **Makefile intergration**. This is te only positional argument.
  2. **Compiler_flags**: all the options that need to be passed to the `gcc` or `g++` compiler, they can be specified as *flag1 flag2 ... flagN* ex: *-I include -g -O3*
  3. **memdetect options**: see below for list, they can be specified as *option1 option1_arg option2 ... optionN* ex: *-a arg -or -e example*
-
-The arguments are all **optional**, but **positional**, which means you have to add them in the order specified by **Usage**
 
 ### Options:
 
@@ -169,19 +167,19 @@ The arguments are all **optional**, but **positional**, which means you have to 
 
 All the output is printed following your program's runtime, so your output will be included in memdetect output and can be used as reference to distinguish between similar malloc calls, adding placeholder `printf` calls to your code can reveal itself very useful
 
- - `(MALLOC_WRAPPER N)`:
+ - `MALLOC N`:
     - for each malloc call, this is printed on the stdout, N represents the index of the malloc call, with the last two functions in the stack, the amount of bytes requested and the memory address
    
- - `(FREE_WRAPPER)`:
+ - `FREE`:
     - for each free call, this is printed on the stdout, with the last two functions in the stack and the address freed
 
 ### Reference (-fail)
 
- - `(MALLOC_FAIL)`:
+ - `FAILED MALLOC`:
     - when a malloc call gets failed by the `-fail` option this will be printed on the stdout with the last two functions in the stack
 
 ### Errors
- - `(MALLOC_ERROR)`:
+ - `MEMDETECT ERROR`:
     - when this is printed it means the program didn't have enough stack size for storing informations about your malloc calls, use the option `--leaks-buff` ot `-lb` with a bigger value than default (10000) to fix this 
 
 ### Example:
@@ -215,19 +213,15 @@ xedgit@pc:~ $ memdetect example.c -s -fail 3
 ```
 
     ================= memdetect by XEDGit ==================
-    gcc  example.c -rdynamic -o ./malloc_debug
-    DYLD_INSERT_LIBRARIES=./fake_malloc.dylib ./malloc_debug:
-    (MALLOC_WRAPPER 1) start -> main allocated 3 bytes at 0x137606df0
-    (MALLOC_WRAPPER 2) main -> strdup allocated 3 bytes at 0x137606d70
-    (MALLOC_FAIL)    main -> strdup malloc num 3 failed
-    (FREE_WRAPPER)   start -> main free 0x137606d70
-    (MALLOC_REPORT)
-        Malloc calls: 3
-        Free calls: 1
-        Free calls to 0x0: 0
-    Leaks at exit:
-    0)  From (M_W 1) main of size 3 at address 0x137606df0  Content: "ex"
-    Total leaks: 1
+    MALLOC 1: ?? -> main allocated 3 bytes at 0x5644ff3459d0
+    MALLOC 2: main -> __strdup allocated 3 bytes at 0x5644ff347770
+    MALLOC 3: main -> __strdup allocated 3 bytes at 0x5644ff3477b0
+    FREE:    ?? -> main free 0x5644ff347770
+    MEMDETECT REPORT:
+            Malloc calls: 3 Free calls: 1   Free calls to 0x0: 0
+    0)      From MALLOC 1 main of size 3 at address 0x5644ff3459d0  Content: "ex"
+    1)      From MALLOC 3 __strdup of size 3 at address 0x5644ff3477b0      Content: "ex"
+    Total leaks: 2
 
 In this case the leak is str1, allocated using malloc in the main() function, str2 is correctly allocated and freed as displayed in the output, and str3 is a NULL pointer which will cause segmentation fault if not error checked
 
