@@ -4,6 +4,8 @@ COL="\e[34m"
 
 COLB="\e[1;34m"
 
+GREENB="\e[1;32m"
+
 ERR="\e[1;31m"
 
 WARN="\e[1;33m"
@@ -271,7 +273,7 @@ function makefile_v1()
 
 	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
 
-	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT $GCC_FLAGS -rdynamic"
+	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT -rdynamic"
 
 	[[ "$OSTYPE" != "darwin"* ]] && MAKEFILE_CMDS[$LINK_STEP]+=" -ldl"
 
@@ -594,7 +596,7 @@ function check_dependencies()
 	type gcc >/dev/null 2>&1 || error "gcc is not installed, exiting"
 }
 
-! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR=""
+! [ -t 1 ] && COL="" && COLB="" && DEF="" && FAINT="" && ERR="" && WARN=""
 
 check_dependencies
 
@@ -632,21 +634,6 @@ then
 		done
 
 	fi
-
-fi
-
-if [[ $I -lt $ARGS_LEN ]] && ! check_options "${ARGS[$I]}"
-then
-	while [[ $I -lt $ARGS_LEN ]]
-	do
-		check_options "${ARGS[$I]}" && (( I = I - 1 )) && break
-
-		GCC_FLAGS+=" ${ARGS[$I]}"
-
-		(( I = I + 1 ))
-
-	done
-	(( I = I + 1 ))
 
 fi
 
@@ -904,6 +891,14 @@ do
 
 			exit
 		;;
+
+		*)
+			if ! [[ $arg == "-"* ]]
+			then
+				error "'$arg' is not a recognized flag"
+			fi
+			GCC_FLAGS+=" $arg"
+		;;
     esac
 
     (( I = I + 1 ))
@@ -937,6 +932,10 @@ fi
 #define COL \"$COL\"
 
 #define COLB \"$COLB\"
+
+#define GREENB \"$GREENB\"
+
+#define WARN \"$WARN\"
 
 #define FAINT \"$FAINT\"
 
@@ -1008,7 +1007,8 @@ void malloc_hook_report()
 		return ;
 	tot_leaks = 0;
 	init_run = 1;
-	printf(COLB \"(MALLOC_REPORT)\" DEF \"\n\tMalloc calls: \" COL \"%d\" DEF \"\n\tFree calls: \" COL \"%d\" DEF \"\n\tFree calls to 0x0: \" COL \"%d\" DEF \"\n\" COLB \"Leaks at exit:\n\" DEF, malloc_count, free_count, zero_free_count);
+
+	printf(COLB \"MEMDETECT REPORT:\" DEF \"\n\tMalloc calls: \" COL \"%d\" DEF \"\tFree calls: \" COL \"%d\" DEF \"\tFree calls to 0x0: \" COL \"%d\" DEF \"\n\", malloc_count, free_count, zero_free_count);
 	if (addr_rep)
 		addr_i = ADDR_ARR_SIZE - 1;
 	for (int i = 0; i <= addr_i; i++)
@@ -1016,13 +1016,17 @@ void malloc_hook_report()
 		if (addresses[i].address)
 		{
 			if (!malloc_hook_check_content((unsigned char *)addresses[i].address))
-				printf(COLB \"%d)\" DEF \"\tFrom \" COLB \"(M_W %d) %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p\" DEF \"	Content: \" COL \"\\\"%s\\\"\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
+				printf(COLB \"%d)\" DEF \"\tFrom \" COL \"MALLOC %d %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p\" DEF \"	Content: \" COL \"\\\"%s\\\"\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address, (char *)addresses[i].address);
 			else
-				printf(COLB \"%d)\" DEF \"\tFrom \" COLB \"(M_W %d) %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
+				printf(COLB \"%d)\" DEF \"\tFrom \" COL \"MALLOC %d %s\" DEF \" of size \" COL \"%d\" DEF \" at address \"COL \"%p	Content unavailable\n\" DEF, tot_leaks++, addresses[i].index, addresses[i].function, addresses[i].bytes, addresses[i].address);
 			${AS_OG}free(addresses[i].function);
 		}
 	}
-	printf(COLB \"Total leaks: %d\nWARNING:\" DEF \" the leaks freed by exit() are still displayed in the report\n\" DEF, tot_leaks);
+	if (tot_leaks)
+		printf(ERR \"Total leaks: %d\n\", tot_leaks);
+	else
+		printf(GREENB \"No leaks detected!\n\" DEF);
+	printf(WARN \"WARNING:\" DEF \" the leaks freed by exit() are still displayed in the report\n\");
 }
 
 ${AS_COMM}int init_malloc_hook()
@@ -1044,6 +1048,7 @@ int	malloc_hook_backtrace_readable(char ***stack_readable)
 	int		stack_size;
 
 	stack_size = backtrace(stack, 10);
+	
 	*stack_readable = backtrace_symbols(stack, stack_size);
 	return (stack_size);
 }
@@ -1127,7 +1132,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		malloc_count++;
 		if (++malloc_fail == MALLOC_FAIL_INDEX || MALLOC_FAIL_INDEX == -1)
 		{
-			printf(COLB \"(MALLOC_FAIL)\t %s -> %s malloc num %d failed\" DEF \"\n\", stack[3], stack[2], malloc_fail);
+			printf(COLB \"FAILED MALLOC:\t %s -> %s malloc number %d returned NULL (0)\" DEF \"\n\", stack[3], stack[2], malloc_fail);
 			${AS_OG}free(stack);
 			init_run = 0;
 			return (0);
@@ -1143,7 +1148,7 @@ void	*${AS_FUNC}malloc(size_t size)
 			addr_i++;
 		if (addr_i == ADDR_ARR_SIZE - 1 && addresses[addr_i].address)
 		{
-			printf(COLB \"(MALLOC_ERROR)\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
+			printf(ERR \"MEMDETECT ERROR:\t\" DEF \" Not enough buffer space, default is 10000 specify a bigger one with the --leaks-buff flag\n\");
 			${AS_OG}free(stack);
 			exit (1);
 		}
@@ -1151,7 +1156,7 @@ void	*${AS_FUNC}malloc(size_t size)
 		addresses[addr_i].bytes = size;
 		addresses[addr_i].index = malloc_count;
 		addresses[addr_i].address = ret; 
-		${ONLY_REPORT}printf(COLB \"(MALLOC_WRAPPER %d) \" FAINT \"%s -> %s allocated %zu bytes at %p\" DEF \"\n\", malloc_count, stack[3], stack[2], size, ret);
+		${ONLY_REPORT}printf(COLB \"MALLOC %d: \" FAINT \"%s -> %s allocated %zu bytes at %p\" DEF \"\n\", malloc_count, stack[3], stack[2], size, ret);
 	}
 	else
 		ret = ${AS_OG}malloc(size);
@@ -1182,7 +1187,7 @@ void	${AS_FUNC}free(void *tofree)
 	if (stack[2][0] != '?' $INCL_XMALL)
 	{
 		${ONLY_REPORT}if (1 $EXCLUDE_RES)
-		${ONLY_REPORT}printf(COLB \"(FREE_WRAPPER)\t\" FAINT \" %s -> %s free %p\" DEF \"\n\" , stack[3], stack[2], tofree);
+		${ONLY_REPORT}printf(COLB \"FREE:\t\" FAINT \" %s -> %s free %p\" DEF \"\n\" , stack[3], stack[2], tofree);
 		if (tofree)
 		{
 			free_count++;
