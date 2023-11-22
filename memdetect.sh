@@ -71,7 +71,7 @@ SRC=""
 HELP_MSG='
 Usage:
 
-./memdetect.sh { [ directory_paths | files ] [compiler_flags] [memdetect options] }
+./memdetect.sh { [ directory_paths | files ] } [compiler_flags] [memdetect options]
 
 Description:
 	files or directory paths:
@@ -81,7 +81,8 @@ Description:
 		To exclude one or more sub-folders use the -e option.
 		If you dont insert this parameter,
 		the script will use the Makefile tools,
-		see Makefile intergration at README.md
+		see Makefile intergration at README.md. This is the 
+		only positional argument.
 
 	compiler_flags:
 		All the options or flags which need to be passed to
@@ -92,11 +93,11 @@ Description:
 	memdetect options:
 		See Options at README.md for list.
 		They can be specified as option1 option1_arg option2 ... optionN.
-		Ex: -a argument -or -e example
+		Ex: -a argument -nr -e example
 
-The arguments are all optional, but positional, which means you have to add them in the order specified by Usage.
+All the arguments are optional.
 
-Memdetect runs standard in C mode, to enable C++ mode use the -+ shorthand or -++ option.
+Memdetect runs standard in C mode, to enable C++ mode use the -++ option.
 
 Useful options:
 	-a | --args arg1 arg2 ... argN:
@@ -109,10 +110,11 @@ Useful options:
 		Show commands executed for compilation and running
 
 	-fail N:
-		Using this option will cause your Nth malloc call to fail (return 0)
+		Using this option will cause the Nth malloc
+		call to fail (return 0)
 
-	-or | --only-report:
-		Display only report
+	-+ | -++:
+		Use to run in C++ mode
 
 	-nr | --no-report:
 		Display no report
@@ -122,6 +124,10 @@ Useful options:
 
 	-fi | --filter-in func1 func2 .. funcN:
 		Prevents any not specified function from creating memdetect output
+
+	-u | --update:
+		Only works if memdetect is installed, updates the installed 
+		executable to the latest commit from github
 
 More flags and documentation at:
 https://github.com/XEDGit/memdetect/blob/master/README.md
@@ -499,11 +505,11 @@ function check_update()
 		if [ -w $(dirname $PATH_TO_BIN) ]
 		then
 			printf "mv tmp $PATH_TO_BIN\n"
-			[ "$DRY_RUN" != "y" ] && mv tmp $PATH_TO_BIN && printcol "Updated memdetect, relaunch it!" "B"
+			[ "$DRY_RUN" != "y" ] && mv tmp $PATH_TO_BIN && printcol "Updated memdetect!" "B"
 
 		else
 			printf "sudo mv tmp $PATH_TO_BIN\n"
-			[ "$DRY_RUN" != "y" ] && sudo mv tmp $PATH_TO_BIN && printcol "Updated memdetect, relaunch it!"
+			[ "$DRY_RUN" != "y" ] && sudo mv tmp $PATH_TO_BIN && printcol "Updated memdetect!"
 			! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && rm -f tmp && error "failed gaining privileges"
 
 		fi

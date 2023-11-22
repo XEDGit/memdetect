@@ -2,7 +2,7 @@ Memdetect is a shell script to check your C or C++ project's memory leaks
   
 It can also:
  - show information about malloc and free calls at runtime
- - fail targeted malloc() calls at runtime, for military-grade stability!
+ - fail targeted malloc() calls at runtime, for space-grade stability!
 
 ## Platforms:
 
@@ -53,7 +53,7 @@ Memdetect runs standard in **C mode**, to enable **C++ mode** use the `-+` optio
     ./memdetect.sh { [ directory_paths | files ] } [compiler_flags] [memdetect options]
 
 #### Description:
- 1. **files** or **directory paths**: Only one of these types can be specified. If you insert a directory path, every .c or .cpp file inside the directory is gonna be compiled, to exclude one or more sub-folders use the `-e` option, if you don't insert this parameter the script will use the Makefile tools, see **Makefile intergration**. This is te only positional argument.
+ 1. **files** or **directory paths**: Only one of these types can be specified. If you insert a directory path, every .c or .cpp file inside the directory is gonna be compiled, to exclude one or more sub-folders use the `-e` option, if you don't insert this parameter the script will use the Makefile tools, see **Makefile intergration**. This is the only positional argument.
  2. **Compiler_flags**: all the options that need to be passed to the `gcc` or `g++` compiler, they can be specified as *flag1 flag2 ... flagN* ex: *-I include -g -O3*
  3. **memdetect options**: see below for list, they can be specified as *option1 option1_arg option2 ... optionN* ex: *-a arg -or -e example*
 
