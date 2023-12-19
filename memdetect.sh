@@ -158,11 +158,15 @@ function printcol()
 
 function cleanup()
 {
-	while read -rs -t 0
-	do
-		read -rsn1
+	if [ -t 0 ]
+	then
+		while read -rs -t 0
+		do
+			read -rsn1
 
-	done
+		done
+	
+	fi
 
 	[ "$DRY_RUN" = "y" ] && exit 0
 
