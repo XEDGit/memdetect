@@ -762,6 +762,7 @@ do
 					if [ -n "${ARGS[$I + 2]}" ] && ! check_options "${ARGS[$I + 2]}" && [[ ${ARGS[$I + 2]} =~ $RE ]]
 					then
 						COUNTER=${ARGS[$I + 2]}
+						((I = I + 1))
 
 					else
 						COUNTER=1
@@ -781,6 +782,8 @@ do
 				MALLOC_FAIL_INDEX=$NEW_VAL
 
 			fi
+
+			((I = I + 1))
 		;;
 
 		"-+" | "-++")
@@ -841,6 +844,8 @@ do
 			(! [[ $NEW_VAL =~ $RE ]] || check_options "$NEW_VAL") && error "the value of --leaks-buff '$NEW_VAL' is not a number"
 
 			ADDR_SIZE=$NEW_VAL
+
+			(( I = I + 1 ))
 		;;
 
 		"-nr" | "--no-report")
