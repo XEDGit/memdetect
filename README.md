@@ -28,7 +28,7 @@ cd memdetect
 ./memdetect.sh
 ```
 
-### Installation (adding to your $PATH):
+### Installation (adding memdetect to your $PATH):
 You can add this program to your $PATH by using the option `--add-path`
 ```console
 ./memdetect.sh --add-path
