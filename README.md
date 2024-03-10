@@ -4,6 +4,19 @@ It can also:
  - show information about malloc and free calls at runtime
  - fail targeted malloc() calls at runtime, for space-grade stability!
 
+## Quick start
+Type this to try memdetect without installing it
+
+```bash
+curl -sfL  https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh | bash
+```
+
+If you need to add arguments use this
+
+```bash
+curl -sfL  https://raw.githubusercontent.com/XEDGit/memdetect/master/memdetect.sh | bash -s -- <add memdetect arguments here>
+```
+
 ## Platforms:
 
 [<img src="https://img.shields.io/badge/Working-52CF44?style=for-the-badge&label=MacOS&logo=apple&logoColor=white" />](https://github.com/XEDGit/memdetect)
