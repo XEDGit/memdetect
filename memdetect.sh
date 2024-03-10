@@ -519,10 +519,11 @@ function check_update()
 
 		else
 			printf "sudo mv tmp $PATH_TO_BIN\n"
-			[ "$DRY_RUN" != "y" ] && sudo mv tmp $PATH_TO_BIN && printcol "Updated memdetect!"
+			[ "$DRY_RUN" != "y" ] && sudo mv tmp $PATH_TO_BIN
 			! [[ $? -eq 0 ]] && [ "$DRY_RUN" != "y" ] && rm -f tmp && error "failed gaining privileges"
 
 		fi
+		printcol "Updated memdetect!"
 		rm -f tmp
 		exit 0
 
