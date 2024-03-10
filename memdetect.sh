@@ -1263,12 +1263,3 @@ fi
 cleanup
 
 exit 0
-else
-	loop
-	printcol "\nExiting\n"
-
-fi
-
-cleanup
-
-exit 0
