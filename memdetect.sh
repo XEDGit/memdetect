@@ -187,7 +187,7 @@ function cleanup()
 
 function makefile_v1()
 {
-	printcol "Approach 'manual':"
+	printcol "Trying 'v1':"
 
 	TMP_FILES=0
 
@@ -281,18 +281,17 @@ function makefile_v1()
 
 	fi
 
-	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
-
-	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT -rdynamic"
-
-	[[ "$OSTYPE" != "darwin"* ]] && MAKEFILE_CMDS[$LINK_STEP]+=" -ldl"
+	if [ -z "$LINK_STEP" ]
+	then
+		return 1
+	fi
 
 	return 0
 }
 
 function makefile_v2()
 {
-	printcol "Approach 'native':"
+	printcol "Trying 'v2':"
 
 	for i in ${!MAKEFILE_CMDS[@]}
 	do
@@ -305,7 +304,8 @@ function makefile_v2()
 				EXTENSION="cpp"
 
 			fi
-			(( COMPILER_COUNT++ ))
+
+			LINK_STEP=$i
 
 		fi
 	done
@@ -337,7 +337,13 @@ function catch_makefile()
 
 	[ "$VER" = "v1" ] && makefile_v1 || makefile_v2
 
-	[ "$MAKEFILE_FAIL" = "y" ] && [ "$LINK_STEP" = "" ] && error "Makefile tools failed (linker command not found in 'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}"
+	[ -z "$LINK_STEP" ] && error "Makefile tools failed (linker command not found in 'make -n${MAKE_RULE:+" "}$MAKE_RULE')${DEF}"
+
+	MAKEFILE_LINK_FILE="$(echo "${MAKEFILE_CMDS[$LINK_STEP]}" | sed -E 's/.*-o( )?//' | sed -E 's/ .*//')"
+
+	MAKEFILE_CMDS[$LINK_STEP]+=" ./fake_malloc.o -o ./$MEMDETECT_OUTPUT -rdynamic"
+
+	[[ "$OSTYPE" != "darwin"* ]] && MAKEFILE_CMDS[$LINK_STEP]+=" -ldl"
 
 	return 0
 }
@@ -368,7 +374,7 @@ function exec_makefile()
 
 		fi
 
-		! [[ $? -eq 0 ]] && MAKEFILE_FAIL="y" && pushd -0 && dirs -c && printcol "Approach 'manual' failed." && break
+		! [[ $? -eq 0 ]] && MAKEFILE_FAIL="y" && pushd -0 && dirs -c && printcol "Mode 'v1' failed." && break
 	done
 
 	if	[ "$MAKEFILE_FAIL" = "y" ]
@@ -990,12 +996,13 @@ ${NO_REPORT}void __attribute__((destructor)) malloc_hook_report();
 
 void malloc_hook_handle_signals(int sig)
 {
-	printf( ERR \"Received signal %s\n\" DEF, strsignal(sig));
+	printf( ERR \"memdetect: Received signal '%s'\n\" DEF, strsignal(sig));
 	exit(1);
 }
 
 void malloc_hook_pid_detect()
 {
+	signal(SIGINT, malloc_hook_handle_signals);
 	signal(SIGSEGV, malloc_hook_handle_signals);
 	signal(SIGABRT, malloc_hook_handle_signals);
 	signal(SIGBUS, malloc_hook_handle_signals);
@@ -1247,6 +1254,15 @@ then
 	COUNTER=$MALLOC_FAIL_INDEX
 	run
 
+else
+	loop
+	printcol "\nExiting\n"
+
+fi
+
+cleanup
+
+exit 0
 else
 	loop
 	printcol "\nExiting\n"
